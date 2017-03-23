@@ -49,7 +49,8 @@ def lexer(text) :
   '''Generator implementation of a lexer'''
   import re
   from string import split, strip, lower, join
-  t=re.split('(\W+)',text) # Split at non alphanumeric sequences
+  t=re.sub('(\{[^\}]*\})', '', text) # remove comments in the *worst possible way*
+  t=re.split('(\W+)',t) # Split at non alphanumeric sequences
   text=join(t,' ') # Join alphanumeric and non-alphanumeric, with spaces
   words=[ strip(w) for w in split(lower(text)) ] # Split tokens
   for word in words :
@@ -58,6 +59,8 @@ def lexer(text) :
 
 # Test support
 __test_program='''VAR x, squ;
+
+{beware of spaces because the lexer wants them}
  
 PROCEDURE square;
 BEGIN
