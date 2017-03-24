@@ -211,6 +211,9 @@ class SymbolPlusOffset(IRNode):
     self.symtab=symtab
     self.parent=parent
     self.children=[self.offset, self.symbol]
+    
+  def collect_uses(self):
+    return self.offset.collect_uses() + [self.symbol]
 
 #STATEMENTS
 class Stat(IRNode):
@@ -310,8 +313,19 @@ class AssignStat(Stat):
     self.symtab=symtab
 
   def collect_uses(self):
-    try : return self.expr.collect_uses()
-    except AttributeError : return []
+    try:
+      a = self.symbol.collect_uses()
+    except AttributeError:
+      a = []
+    try: 
+      return a + self.expr.collect_uses()
+    except AttributeError: 
+      return a
+  
+  def collect_kills(self):
+    if isinstance(self.symbol, SymbolPlusOffset):
+      return [self.symbol.symbol]
+    return [self.symbol]
 
 class BranchStat(Stat):
   def __init__(self, parent=None, cond=None, target=None, symtab=None):
@@ -346,6 +360,9 @@ class StoreStat(Stat):
     self.symtab=symtab
     
   def collect_uses(self):
+    return [self.symbol]
+    
+  def collect_kills(self):
     return [self.symbol]
 
 class LoadStat(Stat):

@@ -29,8 +29,10 @@ class BasicBlock(object):
       uses = set(i.collect_uses())
       uses.difference_update(self.kill)
       self.gen.update(uses)
-      if type(i) in [ AssignStat, StoreStat ]:
-        self.kill.add(i.symbol)
+      try:
+        self.kill |= set(i.collect_kills())
+      except AttributeError: 
+        pass
     # Total number of registers needed
     self.total_vars_used=len(self.gen.union(self.kill))
 
