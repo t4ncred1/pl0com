@@ -410,13 +410,14 @@ class Block(Stat):
     self.defs.parent=self
 
 class PrintStat(Stat):
-  def __init__(self, parent=None, symbol=None, symtab=None):  
+  def __init__(self, parent=None, exp=None, symtab=None):  
     self.parent=parent
-    self.symbol=symbol
+    self.exp=exp
     self.symtab=symtab
+    self.children=[exp]
 
   def collect_uses(self):
-    return [self.symbol]
+    return self.exp.collect_uses()
   
 
 #DEFINITIONS

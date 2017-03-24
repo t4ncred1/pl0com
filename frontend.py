@@ -140,8 +140,9 @@ def statement(symtab) :
     body=statement(symtab)
     return WhileStat(cond=cond, body=body, symtab=symtab)
   elif accept('print') :
-    expect('ident')
-    return PrintStat(symbol=symtab.find(value),symtab=symtab)
+    exp=expression(symtab)
+    return PrintStat(exp=exp,symtab=symtab)
+
  
 @logger
 def block(symtab) :
