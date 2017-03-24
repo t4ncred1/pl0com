@@ -6,6 +6,9 @@ __doc__='''Simple lexer for PL/0 using generators'''
 symbols =  { 
   'lparen' : ['('], 
   'rparen' : [')'], 
+  'lspar'  : ['['],
+  'rspar'  : [']'],
+  'colon'  : [':'],
   'times'  : ['*'], 
   'slash'  : ['/'], 
   'plus'   : ['+'], 

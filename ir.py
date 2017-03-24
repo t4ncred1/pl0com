@@ -16,9 +16,9 @@ class Type(object):
     self.qual_list=qualifiers
 
 class ArrayType(Type):
-  def __init__(self, name, size, basetype):
+  def __init__(self, name, nitm, basetype):
     self.name=name
-    self.size=size
+    self.size=nitm * basetype.size
     self.basetype=basetype
     self.qual_list=[]
 
@@ -73,6 +73,7 @@ class Symbol(object):
   def __repr__(self):
     return self.stype.name+' '+self.name + ( self.value if type(self.value)==str else '')
 
+
 class SymbolTable(list):
   def find(self, name):
     print 'Looking up', name
@@ -109,6 +110,7 @@ class IRNode(object):
       res=label.name+': '+res
     except Exception, e :
       pass
+    #print 'NODE', type(self), id(self)
     if 'children' in dir(self) and len(self.children) :
       res+='\tchildren:\n'
       for node in self.children :
@@ -164,7 +166,17 @@ class Var(IRNode):
 
   def collect_uses(self):
     return [self.symbol]
-
+    
+class ArrayElement(IRNode):
+  def __init__(self, parent=None, var=None, idxexp=None, symtab=None):
+    self.parent=parent
+    self.symbol=var
+    self.symtab=symtab
+    self.idxexp=idxexp
+    
+  def collect_uses(self):
+    return [self.symbol]
+    
 #EXPRESSIONS
 class Expr(IRNode):
   def getOperator(self):
@@ -191,6 +203,14 @@ class CallExpr(Expr):
     self.symbol=function
     if parameters : self.children=parameters[:]
     else : self.children=[]
+
+class SymbolPlusOffset(IRNode):
+  def __init__(self, parent=None, symbol=None, offset=None, symtab=None):
+    self.symbol=symbol
+    self.offset=offset
+    self.symtab=symtab
+    self.parent=parent
+    self.children=[self.offset, self.symbol]
 
 #STATEMENTS
 class Stat(IRNode):

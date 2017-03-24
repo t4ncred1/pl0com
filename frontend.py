@@ -42,7 +42,15 @@ def expect(s) :
  
 @logger
 def factor(symtab) :
-  if accept('ident') : return Var(var=symtab.find(value), symtab=symtab)
+  if accept('ident') :
+    var = symtab.find(value)
+    if (isinstance(var.stype, ArrayType)):
+      expect('lspar')
+      vidx = expression(symtab)
+      expect('rspar')
+      return ArrayElement(var=var, idxexp=vidx, symtab=symtab)
+    else:
+      return Var(var=var, symtab=symtab)
   if accept('number') : return Const(value=value, symtab=symtab)
   elif accept('lparen') :
     expr = expression()
@@ -66,12 +74,12 @@ def term(symtab) :
 @logger
 def expression(symtab) :
   op=None
-  if new_sym in [ 'plus' or 'minus' ] :
+  if new_sym in [ 'plus', 'minus' ] :
     getsym()
     op = sym
   expr = term(symtab)
   if op : expr = UnExpr(children=[initial_op, expr], symtab=symtab)
-  while new_sym in [ 'plus' or 'minus' ] :
+  while new_sym in [ 'plus', 'minus' ] :
     getsym()
     op = sym
     expr2 = term(symtab)
@@ -98,6 +106,15 @@ def condition(symtab) :
 def statement(symtab) :
   if accept('ident') :
     target=symtab.find(value)
+    if isinstance(target.stype, ArrayType):
+      expect('lspar')
+      #import pdb
+      #pdb.set_trace()
+      idx = expression(symtab)
+      esize = target.stype.basetype.size / 8;
+      offset = BinExpr(children=['times', idx, Const(value=esize, symtab=symtab)], symtab=symtab)
+      expect('rspar')
+      target = SymbolPlusOffset(symbol=target, offset=offset, symtab=symtab)
     expect('becomes')
     expr=expression(symtab)
     return AssignStat(target=target, expr=expr, symtab=symtab)
@@ -130,26 +147,18 @@ def statement(symtab) :
 def block(symtab) :
   local_vars = SymbolTable()
   defs = DefinitionList()
-  if accept('constsym') :
-    expect('ident')
-    name=value
-    expect('eql')
-    expect('number')
-    local_vars.append(Symbol(name, standard_types['int']), value)
-    while accept('comma') :
-      expect('ident')
-      name=value
-      expect('eql')
-      expect('number')
-      local_vars.append(Symbol(name, standard_types['int']), value)
-    expect('semicolon');
-  if accept('varsym') :
-    expect('ident')
-    local_vars.append(Symbol(value, standard_types['int']))
-    while accept('comma') :
-      expect('ident')
-      local_vars.append(Symbol(value, standard_types['int']))
-    expect('semicolon');
+  
+  while accept('constsym') or accept('varsym'):
+    if (sym == 'constsym'):
+      constdef(local_vars)
+      while accept('comma'):
+        constdef(local_vars)
+    else:
+      vardef(local_vars)
+      while accept('comma'):
+        vardef(local_vars)
+    expect('semicolon')
+
   while accept('procsym') :
     expect('ident')
     fname=value
@@ -160,6 +169,43 @@ def block(symtab) :
     defs.append(FunctionDef(symbol=local_vars.find(fname), body=fbody))
   stat = statement(SymbolTable(symtab[:]+local_vars))
   return Block(gl_sym=symtab, lc_sym=local_vars, defs=defs, body=stat)
+  
+  
+@logger
+def constdef(local_vars):
+  expect('ident')
+  name=value
+  expect('eql')
+  expect('number')
+  local_vars.append(Symbol(name, standard_types['int']), value)
+  while accept('comma') :
+    expect('ident')
+    name=value
+    expect('eql')
+    expect('number')
+    local_vars.append(Symbol(name, standard_types['int']), value)
+    
+  
+@logger
+def vardef(symtab):
+  expect('ident')
+  name = value
+  size = 0
+  if accept('lspar'):
+    expect('number')
+    size = value
+    expect('rspar')
+    
+  type = standard_types['int']
+  if accept('colon'):
+    accept('ident')
+    type = standard_types[value]
+    
+  if size > 0:
+    symtab.append(Symbol(name, ArrayType(name, size, type)))
+  else:
+    symtab.append(Symbol(name, type))
+  
  
 @logger
 def program() :
