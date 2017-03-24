@@ -45,9 +45,11 @@ def factor(symtab) :
   if accept('ident') :
     var = symtab.find(value)
     if (isinstance(var.stype, ArrayType)):
-      expect('lspar')
-      vidx = expression(symtab)
-      expect('rspar')
+      vidx = []
+      for i in var.stype.dims:
+        expect('lspar')
+        vidx.append(expression(symtab))
+        expect('rspar')
       return ArrayElement(var=var, idxexp=vidx, symtab=symtab)
     else:
       return Var(var=var, symtab=symtab)
@@ -107,17 +109,26 @@ def statement(symtab) :
   if accept('ident') :
     target=symtab.find(value)
     if isinstance(target.stype, ArrayType):
-      expect('lspar')
-      #import pdb
-      #pdb.set_trace()
-      idx = expression(symtab)
-      esize = target.stype.basetype.size / 8;
-      offset = BinExpr(children=['times', idx, Const(value=esize, symtab=symtab)], symtab=symtab)
-      expect('rspar')
+      offset=None
+      for i in range(0, len(target.stype.dims)):
+        if i + 1 < len(target.stype.dims):
+          planedisp = reduce(lambda x,y: x*y, target.stype.dims[i+1:])
+        else:
+          planedisp = 1
+        expect('lspar')
+        idx = expression(symtab)
+        esize = (target.stype.basetype.size / 8) * planedisp;
+        planed = BinExpr(children=['times', idx, Const(value=esize, symtab=symtab)], symtab=symtab)
+        if offset == None:
+          offset = planed
+        else:
+          offset = BinExpr(children=['plus', offset, planed], symtab=symtab)
+        expect('rspar')
       target = SymbolPlusOffset(symbol=target, offset=offset, symtab=symtab)
     expect('becomes')
     expr=expression(symtab)
     return AssignStat(target=target, expr=expr, symtab=symtab)
+    
   elif accept('callsym') :
     expect('ident')
     return CallStat(call_expr=CallExpr(function=symtab.find(value), symtab=symtab), symtab=symtab)
@@ -191,10 +202,10 @@ def constdef(local_vars):
 def vardef(symtab):
   expect('ident')
   name = value
-  size = 0
-  if accept('lspar'):
+  size = []
+  while accept('lspar'):
     expect('number')
-    size = value
+    size.append(int(value))
     expect('rspar')
     
   type = standard_types['int']
@@ -202,7 +213,7 @@ def vardef(symtab):
     accept('ident')
     type = standard_types[value]
     
-  if size > 0:
+  if len(size) > 0:
     symtab.append(Symbol(name, ArrayType(name, size, type)))
   else:
     symtab.append(Symbol(name, type))

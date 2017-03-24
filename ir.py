@@ -4,6 +4,12 @@ __doc__='''Intermediate Representation
 Could be improved by relying less on class hierarchy and more on string tags and/or duck typing
 Includes lowering and flattening functions'''
 
+# Every node must have a lowering function or a code generation function.
+# Assign statements are more complex than they seem; they typically translate
+# to a store stmt, with the symbol and a temporary as parameters. Var translates
+# to a load statement to the same temporary that is used in a following stage
+# for doing the computations. The expression tree gets flattened to a stmt list
+
 #SYMBOLS AND TYPES
 basetypes = [ 'Int', 'Float', 'Label', 'Struct', 'Function' ]
 qualifiers = [ 'unsigned' ]
@@ -16,9 +22,11 @@ class Type(object):
     self.qual_list=qualifiers
 
 class ArrayType(Type):
-  def __init__(self, name, nitm, basetype):
+  def __init__(self, name, dims, basetype):
+    # dims: set of dimensions: dims = [5] array; dims = [5, 5] matrix...
     self.name=name
-    self.size=nitm * basetype.size
+    self.dims=dims
+    self.size=reduce(lambda a, b: a*b, dims) * basetype.size
     self.basetype=basetype
     self.qual_list=[]
 
@@ -169,13 +177,17 @@ class Var(IRNode):
     
 class ArrayElement(IRNode):
   def __init__(self, parent=None, var=None, idxexp=None, symtab=None):
+    # idxexp may be a list of exps in case of multi-d arrays
     self.parent=parent
     self.symbol=var
     self.symtab=symtab
     self.idxexp=idxexp
     
   def collect_uses(self):
-    return [self.symbol]
+    a = [self.symbol]
+    for e in self.idxexp:
+      a += e.collect_uses()
+    return a
     
 #EXPRESSIONS
 class Expr(IRNode):

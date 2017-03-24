@@ -61,11 +61,14 @@ def lexer(text) :
 
 
 # Test support
-__test_program='''VAR x, squ;
+__test_program='''VAR x, y, squ;
+VAR arr[5] : char;
+var multid[5] [5] : short;
 
-{beware of spaces because the lexer wants them}
+{beware of spaces because the lexer wants them!!! }
  
 PROCEDURE square;
+
 BEGIN
    squ := x * x
 END;
@@ -75,9 +78,24 @@ BEGIN
    WHILE x <= 10 DO
    BEGIN
       CALL square;
-      x := x + 1 ;
+      x := x + 1 - 2 * x;
       !squ
-   END
+   END;
+   
+   x := 101;
+   while x <= 105 do begin
+    arr[x - 100] := x;
+    !arr[x - 100] 
+   end;
+   
+   x := 1;
+   y := 1;
+   while x <= 5 do begin
+    while y <= 5 do begin
+      multid[x] [y] := arr[x] ;
+      !multid[x] [y]
+    end
+  end
 END.'''
 
 if __name__ == '__main__' :
