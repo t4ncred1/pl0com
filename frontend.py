@@ -28,7 +28,7 @@ def getsym():
   return 1
   
 def error(msg):
-  print msg, new_sym, new_value
+  print '\033[31m', msg, new_sym, new_value, '\033[39m'
   
 def accept(s):
   print 'accepting', s, '==', new_sym
