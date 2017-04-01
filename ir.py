@@ -371,7 +371,8 @@ class AssignStat(Stat):
       return [self.symbol.symbol]
     return [self.symbol]
 
-class BranchStat(Stat):
+
+class BranchStat(Stat):   # ll
   def __init__(self, parent=None, cond=None, target=None, symtab=None):
     self.parent=parent
     self.cond=cond # cond == None -> True
@@ -391,34 +392,112 @@ class BranchStat(Stat):
     except AttributeError :
       return False
 
-class EmptyStat(Stat):
+
+class EmptyStat(Stat):  # ll
   pass
 
   def collect_uses(self):
     return []
 
+
 class StoreStat(Stat):
-  def __init__(self, parent=None, symbol=None, symtab=None):
+  # stores its children to the specified register-stored symbol
+  def __init__(self, parent=None, dest=None, symbol=None, symtab=None):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
+    if self.dest.alloct != 'mem':
+      raise RuntimeError('store not to memory')
+    self.dest = dest
     
   def collect_uses(self):
     return [self.symbol]
     
   def collect_kills(self):
-    return [self.symbol]
+    return [self.dest]
+
 
 class LoadStat(Stat):
-  def __init__(self, parent=None, symbol=None, symtab=None):
+  # load the value pointed to by the specified symbol + offset
+  def __init__(self, parent=None, dest=None, symbol=None, offset=None, symtab=None):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
+    if self.dest.alloct != 'reg':
+      raise RuntimeError('load not to register')
+    self.dest = dest
+    self.offset = offset
+    if self.offset.alloct != 'reg':
+      raise RuntimeError('offset not in register')
 
   def collect_uses(self):
+    return [self.symbol]
+    
+  def collect_kills(self):
+    return [self.dest]
+    
+    
+class LoadImmStat(Stat):
+  def __init__(self, parent=None, dest=None, val=0, symtab=None):
+    self.parent=parent
+    self.val = val
+    self.dest = dest
+    if self.dest.alloct != 'reg':
+      raise RuntimeError('load not to register')
+  
+  def collect_uses(self):
     return []
+    
+  def collect_kills(self):
+    return [self.dest]
+    
+    
+class BinStat(Stat):  # ll
+  def __init__(self, parent=None, dest=None, op=None, srca=None, srcb=None, symtab=None):
+    self.parent = parent
+    self.dest = dest   # symbol
+    self.op = op       
+    self.srca = srca   # symbol
+    self.srcb = srcb   # symbol
+    if self.dest.alloct != 'reg':
+      raise RuntimeError('binstat dest not to register')
+    if self.srca.alloct != 'reg' or self.srcb.alloct != 'reg':
+      raise RuntimeError('binstat src not in register')
+    self.symtab = symtab
+    
+  def collect_kills(self):
+    return [self.dest]
+    
+  def collect_uses(self):
+    return [self.srca, self.srcb]
+  
+  def destination(self):
+    return self.dest
+    
+    
+class UnaryStat(Stat):  # ll
+  def __init__(self, parent=None, dest=None, op=None, src=None, symtab=None):
+    self.parent = parent
+    self.dest = dest
+    self.op = op     
+    self.src = src
+    self.symtab = symtab
+    if self.dest.alloct != 'reg':
+      raise RuntimeError('binstat dest not to register')
+    if self.src.alloct != 'reg':
+      raise RuntimeError('binstat src not in register')
+    
+  def collect_kills(self):
+    return [self.dest]
+    
+  def collect_uses(self):
+    return [self.src]
+    
+  def destination(self):
+    return self.dest
 
-class StatList(Stat):
+
+class StatList(Stat):  # ll
   def __init__(self,parent=None, children=None, symtab=None):
     print 'StatList : new', id(self)
     self.parent=parent
