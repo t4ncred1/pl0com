@@ -108,12 +108,20 @@ class SymbolTable(list):
     return [ symb for symb in self if symb.stype not in barred_types ]
 
 
-#IRNODE
+# IRNODE
+
 class IRNode(object):
   def __init__(self,parent=None, children=None, symtab=None):
     self.parent=parent
-    if children : self.children=children
-    else : self.children=[]
+    if children : 
+      self.children=children
+      for c in self.children:
+        try:
+          c.parent = self
+        except Exception:
+          pass
+    else : 
+      self.children=[]
     self.symtab=symtab
   
   def __repr__(self):
@@ -121,6 +129,10 @@ class IRNode(object):
     attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab' ]) & set(dir(self))
 
     res=`type(self)`+' '+`id(self)`+' {\n'
+    if self.parent != None:
+      res += 'parent = ' + `id(self.parent)` + '\n'
+    else:
+      res += '                                                                      <<<<<----- BUG? MISSING PARENT\n'
     try :
       label=self.getLabel()
       res=label.name+': '+res
