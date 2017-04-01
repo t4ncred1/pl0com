@@ -72,14 +72,22 @@ standard_types = {
   'function' : FunctionType(),
 }
 
+
+alloctype = [ 'mem', 'reg', 'imm' ]
 class Symbol(object):
-  def __init__(self, name, stype, value=None):
+  # may be assigned to either:
+  #  - a register
+  #  - a memory location
+  #  - an immediate (but this is produced by later optimizations)
+  def __init__(self, name, stype, value=None, alloct='mem'):
     self.name=name
     self.stype=stype
     self.value=value # if not None, it is a constant
+    self.alloct=alloct
 
   def __repr__(self):
-    return self.stype.name+' '+self.name + ( self.value if type(self.value)==str else '')
+    return self.alloct + ' ' + self.stype.name + ' ' + self.name + \
+           ( self.value if type(self.value)==str else '')
 
 
 class SymbolTable(list):
