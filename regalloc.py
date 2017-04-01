@@ -54,7 +54,7 @@ class minimal_register_allocator(object):
 
   def get_non_interfering(self,var):
     interfering = set([])
-    for bb in to_alloc :
+    for bb in self.to_alloc :
       the_vars = self.to_alloc[bb][0].union(self.to_alloc[bb][1])
       if var in the_vars :
         interfering.update(the_vars)
@@ -73,7 +73,7 @@ class minimal_register_allocator(object):
         except NotEnoughRegsException :
           candidate_regs = self.get_non_interfering(v)
           if len(candidate_regs) :
-            self.replace(v,candidate_regs[0])
+            self.replace(v,next(iter(candidate_regs)))
           else :
             print self.vars
             raise Exception, 'A spill is needed'
