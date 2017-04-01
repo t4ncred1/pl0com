@@ -435,8 +435,11 @@ class StatList(Stat):
     self.children.append(elem)
 
   def collect_uses(self):
-    return sum([ c.collect_uses() for c in self.children ])
-
+    u = []
+    for c in self.children:
+      u += c.collect_uses()
+    return u
+    
   def print_content(self):
       print 'StatList', id(self), ': [',
       for n in self.children :
