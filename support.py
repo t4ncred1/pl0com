@@ -39,7 +39,7 @@ def lowering(node):
     if not check : 
       print 'Failed!'
   except Exception, e :
-    #print 'Cannot lower', type(node), e
+    print 'Cannot lower', id(node), type(node), e
     pass # lowering not yet implemented for this class
 
 def flattening(node):

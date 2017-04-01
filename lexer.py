@@ -68,7 +68,6 @@ var multid[5] [5] : short;
 {beware of spaces because the lexer wants them!!! }
  
 PROCEDURE square;
-
 BEGIN
    squ := x * x
 END;

@@ -9,10 +9,26 @@ Includes lowering and flattening functions'''
 # to a store stmt, with the symbol and a temporary as parameters. Var translates
 # to a load statement to the same temporary that is used in a following stage
 # for doing the computations. The expression tree gets flattened to a stmt list
+# larger expressions: last temporary used is the result
 
 #SYMBOLS AND TYPES
 basetypes = [ 'Int', 'Float', 'Label', 'Struct', 'Function' ]
 qualifiers = [ 'unsigned' ]
+
+
+
+# UTILITIES
+
+tempcount = 0
+def newTemporary(symtab, type):
+  global tempcount
+  temp = Symbol(name='t'+str(tempcount), stype=type, alloct='reg')
+  tempcount += 1
+  return temp
+
+
+
+# TYPES
 
 class Type(object):
   def __init__(self, name, size, basetype, qualifiers=None):
@@ -59,6 +75,7 @@ class FunctionType(Type):
     self.size=0
     self.basetype='Function'
     self.qual_list=[]
+
 
 standard_types = {
   'int'  : Type('int',   32, 'Int'),
@@ -194,6 +211,16 @@ class Const(IRNode):
     self.value=value
     self.symbol=symb
     self.symtab=symtab
+    
+  def lower(self):
+    if (self.symbol == None):
+      new = newTemporary(self.symtab, standard_types['int'])
+      loadst = LoadImmStat(dest=new, val=self.value, symtab=self.symtab)
+    else:
+      new = newTemporary(self.symtab, self.symbol.stype)
+      loadst = LoadStat(dest=new, symbol=self.symbol, symtab=self.symtab)
+    return self.parent.replace(self, StatList(children=[loadst], symtab=self.symtab))
+    
     
 class Var(IRNode):
   def __init__(self,parent=None, var=None, symtab=None):
