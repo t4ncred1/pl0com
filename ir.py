@@ -152,7 +152,6 @@ class IRNode(object):
     return res
 
   def navigate(self, action):
-    action(self)
     attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab' ]) & set(dir(self))
     if 'children' in dir(self) and len(self.children) :
       #print 'navigating children of', type(self), id(self), len(self.children)
@@ -162,6 +161,7 @@ class IRNode(object):
     for d in attrs :
       try : getattr(self,d).navigate(action)
       except Exception : pass
+    action(self)
   
   def replace(self, old, new):
     if 'children' in dir(self) and len(self.children) and old in self.children:
