@@ -223,6 +223,7 @@ class Const(IRNode):
     
     
 class Var(IRNode):
+  # loads in a temporary the value pointed to by the symbol
   def __init__(self,parent=None, var=None, symtab=None):
     self.parent=parent
     self.symbol=var
@@ -230,6 +231,12 @@ class Var(IRNode):
 
   def collect_uses(self):
     return [self.symbol]
+    
+  def lower(self):
+    new = newTemporary(self.symtab, self.symbol.stype)
+    loadst = LoadStat(dest=new, symbol=self.symbol, symtab=self.symtab)
+    return self.parent.replace(self, StatList(children=[loadst], symtab=self.symtab))
+    
     
 class ArrayElement(IRNode):
   def __init__(self, parent=None, var=None, idxexp=None, symtab=None):
