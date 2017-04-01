@@ -244,6 +244,8 @@ class SymbolPlusOffset(IRNode):
     self.symtab=symtab
     self.parent=parent
     self.children=[self.offset, self.symbol]
+    self.offset.parent = self
+    self.symbol.parent = self
     
   def collect_uses(self):
     return self.offset.collect_uses() + [self.symbol]
@@ -337,10 +339,15 @@ class ForStat(Stat):
     self.step.parent=self
     self.symtab=symtab
 
+
 class AssignStat(Stat):
   def __init__(self, parent=None, target=None, expr=None, symtab=None):
     self.parent=parent
     self.symbol=target
+    try:
+      self.symbol.parent = self
+    except AttributeError:
+      pass
     self.expr=expr
     self.expr.parent=self
     self.symtab=symtab
@@ -465,6 +472,7 @@ class PrintStat(Stat):
     self.exp=exp
     self.symtab=symtab
     self.children=[exp]
+    exp.parent = self
 
   def collect_uses(self):
     return self.exp.collect_uses()
