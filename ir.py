@@ -166,6 +166,7 @@ class IRNode(object):
   def replace(self, old, new):
     if 'children' in dir(self) and len(self.children) and old in self.children:
       self.children[self.children.index(old)]=new
+      new.parent = self
       return True
     attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab' ]) & set(dir(self))
     for d in attrs :
