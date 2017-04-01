@@ -450,11 +450,11 @@ class LoadStat(Stat):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
+    self.dest = dest
     if self.dest.alloct != 'reg':
       raise RuntimeError('load not to register')
-    self.dest = dest
     self.offset = offset
-    if self.offset.alloct != 'reg':
+    if self.offset != None and self.offset.alloct != 'reg':
       raise RuntimeError('offset not in register')
 
   def collect_uses(self):
