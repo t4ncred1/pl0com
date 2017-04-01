@@ -177,9 +177,17 @@ class IRNode(object):
       except Exception :
         pass
     return False
+    
+  def getFunction(self):
+    if not self.parent : return 'global'
+    elif type(self.parent)== FunctionDef :
+      return self.parent
+    else :
+      return self.parent.getFunction()
       
 
 #CONST and VAR  
+
 class Const(IRNode):
   def __init__(self,parent=None, value=0, symb=None, symtab=None):
     self.parent=parent
@@ -250,21 +258,17 @@ class SymbolPlusOffset(IRNode):
   def collect_uses(self):
     return self.offset.collect_uses() + [self.symbol]
 
-#STATEMENTS
+
+# STATEMENTS
+
 class Stat(IRNode):
+  # ABSTRACT
   def setLabel(self, label):
     self.label=label
     label.value=self # set target
   
   def getLabel(self):
     return self.label
-
-  def getFunction(self):
-    if not self.parent : return 'global'
-    elif type(self.parent)== FunctionDef :
-      return self.parent
-    else :
-      return self.parent.getFunction()
       
 
 class CallStat(Stat): 
