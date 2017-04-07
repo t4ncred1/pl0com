@@ -167,19 +167,19 @@ def statement(symtab) :
 
  
 @logger
-def block(symtab) :
+def block(symtab, alloct='auto') :
   local_vars = SymbolTable()
   defs = DefinitionList()
   
   while accept('constsym') or accept('varsym'):
     if (sym == 'constsym'):
-      constdef(local_vars)
+      constdef(local_vars, alloct)
       while accept('comma'):
-        constdef(local_vars)
+        constdef(local_vars, alloct)
     else:
-      vardef(local_vars)
+      vardef(local_vars, alloct)
       while accept('comma'):
-        vardef(local_vars)
+        vardef(local_vars, alloct)
     expect('semicolon')
 
   while accept('procsym') :
@@ -195,22 +195,22 @@ def block(symtab) :
   
   
 @logger
-def constdef(local_vars):
+def constdef(local_vars, alloct='auto'):
   expect('ident')
   name=value
   expect('eql')
   expect('number')
-  local_vars.append(Symbol(name, standard_types['int']), value)
+  local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), value)
   while accept('comma') :
     expect('ident')
     name=value
     expect('eql')
     expect('number')
-    local_vars.append(Symbol(name, standard_types['int']), value)
+    local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), value)
     
   
 @logger
-def vardef(symtab):
+def vardef(symtab, alloct='auto'):
   expect('ident')
   name = value
   size = []
@@ -225,9 +225,9 @@ def vardef(symtab):
     type = standard_types[value]
     
   if len(size) > 0:
-    symtab.append(Symbol(name, ArrayType(name, size, type)))
+    symtab.append(Symbol(name, ArrayType(name, size, type), alloct=alloct))
   else:
-    symtab.append(Symbol(name, type))
+    symtab.append(Symbol(name, type, alloct=alloct))
   
  
 @logger
@@ -235,7 +235,7 @@ def program() :
   '''Axiom'''
   global_symtab=SymbolTable()
   getsym()
-  the_program = block(global_symtab)
+  the_program = block(global_symtab, 'global')
   expect('period')
   return the_program
 

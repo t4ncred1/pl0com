@@ -90,13 +90,13 @@ standard_types = {
 }
 
 
-alloctype = [ 'mem', 'reg', 'imm' ]
+alloctype = [ 'global', 'auto', 'reg', 'imm' ]   # mem -> auto, global
 class Symbol(object):
   # may be assigned to either:
   #  - a register
   #  - a memory location
   #  - an immediate (but this is produced by later optimizations)
-  def __init__(self, name, stype, value=None, alloct='mem'):
+  def __init__(self, name, stype, value=None, alloct='auto'):
     self.name=name
     self.stype=stype
     self.value=value # if not None, it is a constant
@@ -488,7 +488,7 @@ class StoreStat(Stat):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
-    if self.dest.alloct != 'mem':
+    if self.dest.alloct != 'global' and self.dest.alloct != 'auto':
       raise RuntimeError('store not to memory')
     self.dest = dest
     
