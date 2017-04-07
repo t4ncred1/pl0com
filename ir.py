@@ -143,7 +143,7 @@ class IRNode(object):
   
   def __repr__(self):
     from string import split, join
-    attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab' ]) & set(dir(self))
+    attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab', 'offset' ]) & set(dir(self))
 
     res=`type(self)`+' '+`id(self)`+' {\n'
     if self.parent != None:
@@ -169,14 +169,16 @@ class IRNode(object):
     return res
 
   def navigate(self, action):
-    attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab' ]) & set(dir(self))
+    attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab', 'offset']) & set(dir(self))
     if 'children' in dir(self) and len(self.children) :
-      #print 'navigating children of', type(self), id(self), len(self.children)
+      print 'navigating children of', type(self), id(self), len(self.children)
       for node in self.children :
         try : node.navigate(action)
         except Exception : pass
     for d in attrs :
-      try : getattr(self,d).navigate(action)
+      try :
+        getattr(self,d).navigate(action)
+        print 'successfully navigated attr ',d,' of', type(self), id(self)
       except Exception : pass
     action(self)
   
@@ -185,7 +187,7 @@ class IRNode(object):
     if 'children' in dir(self) and len(self.children) and old in self.children:
       self.children[self.children.index(old)]=new
       return True
-    attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab' ]) & set(dir(self))
+    attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab', 'offset']) & set(dir(self))
     for d in attrs :
       try :
         if getattr(self,d)==old :
@@ -239,17 +241,18 @@ class Var(IRNode):
     
     
 class ArrayElement(IRNode):
-  def __init__(self, parent=None, var=None, idxexp=None, symtab=None):
-    # idxexp may be a list of exps in case of multi-d arrays
+  # loads in a temporary the value pointed by: the symbol + the index
+  def __init__(self, parent=None, var=None, offset=None, symtab=None):
+    # offset can NOT be a list of exps in case of multi-d arrays
     self.parent=parent
     self.symbol=var
     self.symtab=symtab
-    self.idxexp=idxexp
+    self.offset=offset
+    self.offset.parent = self
     
   def collect_uses(self):
     a = [self.symbol]
-    for e in self.idxexp:
-      a += e.collect_uses()
+    a += self.offset.collect_uses()
     return a
     
 #EXPRESSIONS

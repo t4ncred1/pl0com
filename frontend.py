@@ -39,6 +39,24 @@ def expect(s) :
   if accept(s) : return 1
   error("expect: unexpected symbol")
   return 0
+  
+  
+def linearizeMultidVector(explist, target, symtab):
+  offset=None
+  for i in range(0, len(target.stype.dims)):
+    if i + 1 < len(target.stype.dims):
+      planedisp = reduce(lambda x,y: x*y, target.stype.dims[i+1:])
+    else:
+      planedisp = 1
+    idx = explist[i]
+    esize = (target.stype.basetype.size / 8) * planedisp;
+    planed = BinExpr(children=['times', idx, Const(value=esize, symtab=symtab)], symtab=symtab)
+    if offset == None:
+      offset = planed
+    else:
+      offset = BinExpr(children=['plus', offset, planed], symtab=symtab)
+  return offset
+
  
 @logger
 def factor(symtab) :
@@ -50,7 +68,8 @@ def factor(symtab) :
         expect('lspar')
         vidx.append(expression(symtab))
         expect('rspar')
-      return ArrayElement(var=var, idxexp=vidx, symtab=symtab)
+      offset = linearizeMultidVector(vidx, var, symtab)
+      return ArrayElement(var=var, offset=offset, symtab=symtab)
     else:
       return Var(var=var, symtab=symtab)
   if accept('number') : return Const(value=value, symtab=symtab)
@@ -108,22 +127,14 @@ def condition(symtab) :
 def statement(symtab) :
   if accept('ident') :
     target=symtab.find(value)
+    idxes = []
     if isinstance(target.stype, ArrayType):
       offset=None
       for i in range(0, len(target.stype.dims)):
-        if i + 1 < len(target.stype.dims):
-          planedisp = reduce(lambda x,y: x*y, target.stype.dims[i+1:])
-        else:
-          planedisp = 1
         expect('lspar')
-        idx = expression(symtab)
-        esize = (target.stype.basetype.size / 8) * planedisp;
-        planed = BinExpr(children=['times', idx, Const(value=esize, symtab=symtab)], symtab=symtab)
-        if offset == None:
-          offset = planed
-        else:
-          offset = BinExpr(children=['plus', offset, planed], symtab=symtab)
+        idxes.append(expression(symtab))
         expect('rspar')
+      offset = linearizeMultidVector(idxes, target, symtab)
       target = SymbolPlusOffset(symbol=target, offset=offset, symtab=symtab)
     expect('becomes')
     expr=expression(symtab)
