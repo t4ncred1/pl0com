@@ -255,8 +255,20 @@ class ArrayElement(IRNode):
     a += self.offset.collect_uses()
     return a
     
+  def lower(self):
+    global standard_types
+    dest = newTemporary(self.symtab, self.symbol.stype)
+    statl = []
+    
+    statl.append(self.offset);
+    statl.append(LoadStat(dest=dest, symbol=self.symbol, offset=self.offset.destination(), symtab=self.symtab))    
+    return self.parent.replace(self, StatList(children=statl, symtab=self.symtab))
+    
+    
 #EXPRESSIONS
+
 class Expr(IRNode):
+  # ABSTRACT
   def getOperator(self):
     return self.children[0]
 
