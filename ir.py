@@ -326,19 +326,6 @@ class CallExpr(Expr):
     else : self.children=[]
 
 
-class SymbolPlusOffset(IRNode):
-  def __init__(self, parent=None, symbol=None, offset=None, symtab=None):
-    self.symbol=symbol
-    self.offset=offset
-    self.symtab=symtab
-    self.parent=parent
-    self.offset.parent = self
-    self.symbol.parent = self
-    
-  def collect_uses(self):
-    return self.offset.collect_uses() + [self.symbol]
-
-
 # STATEMENTS
 
 class Stat(IRNode):
@@ -427,7 +414,7 @@ class ForStat(Stat):
 
 
 class AssignStat(Stat):
-  def __init__(self, parent=None, target=None, expr=None, symtab=None):
+  def __init__(self, parent=None, target=None, offset=None, expr=None, symtab=None):
     self.parent=parent
     self.symbol=target
     try:
@@ -437,20 +424,24 @@ class AssignStat(Stat):
     self.expr=expr
     self.expr.parent=self
     self.symtab=symtab
+    self.offset=offset
+    if self.offset != None:
+      self.offset.parent = self
 
   def collect_uses(self):
     try:
       a = self.symbol.collect_uses()
     except AttributeError:
       a = []
+    try:
+      a += self.offset.collect_uses()
+    except AttributeError: pass
     try: 
       return a + self.expr.collect_uses()
     except AttributeError: 
       return a
   
   def collect_kills(self):
-    if isinstance(self.symbol, SymbolPlusOffset):
-      return [self.symbol.symbol]
     return [self.symbol]
 
 

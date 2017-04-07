@@ -127,18 +127,17 @@ def condition(symtab) :
 def statement(symtab) :
   if accept('ident') :
     target=symtab.find(value)
-    idxes = []
+    offset=None
     if isinstance(target.stype, ArrayType):
-      offset=None
+      idxes = []
       for i in range(0, len(target.stype.dims)):
         expect('lspar')
         idxes.append(expression(symtab))
         expect('rspar')
       offset = linearizeMultidVector(idxes, target, symtab)
-      target = SymbolPlusOffset(symbol=target, offset=offset, symtab=symtab)
     expect('becomes')
     expr=expression(symtab)
-    return AssignStat(target=target, expr=expr, symtab=symtab)
+    return AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
     
   elif accept('callsym') :
     expect('ident')
