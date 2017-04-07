@@ -452,6 +452,9 @@ class StoreStat(Stat):
     
   def collect_kills(self):
     return [self.dest]
+  
+  def __repr__(self):
+    return `self.dest` + ' <- ' + `self.symbol`
 
 
 class LoadStat(Stat):
@@ -474,6 +477,13 @@ class LoadStat(Stat):
     return [self.dest]
     
     
+  def __repr__(self):
+    if self.offset == None:
+      return `self.dest` + ' <- ' + `self.symbol`
+    else:
+      return `self.dest` + ' <- ' + `self.symbol` + ' + ' + `self.offset`
+    
+    
 class LoadImmStat(Stat):
   def __init__(self, parent=None, dest=None, val=0, symtab=None):
     self.parent=parent
@@ -487,6 +497,9 @@ class LoadImmStat(Stat):
     
   def collect_kills(self):
     return [self.dest]
+    
+  def __repr__(self):
+    return `self.dest` + ' <- ' + `self.val`
     
     
 class BinStat(Stat):  # ll
@@ -511,6 +524,9 @@ class BinStat(Stat):  # ll
   def destination(self):
     return self.dest
     
+  def __repr__(self):
+    return `self.dest` + ' <- ' + `self.srca` + ' ' + self.op + ' ' + `self.srcb`
+    
     
 class UnaryStat(Stat):  # ll
   def __init__(self, parent=None, dest=None, op=None, src=None, symtab=None):
@@ -532,6 +548,9 @@ class UnaryStat(Stat):  # ll
     
   def destination(self):
     return self.dest
+    
+  def __repr__(self):
+    return `self.dest` + ' <- ' + self.op + ' ' + `self.src`
 
 
 class StatList(Stat):  # ll
