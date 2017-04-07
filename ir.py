@@ -322,6 +322,7 @@ class CallExpr(Expr):
   def __init__(self, parent=None, function=None, parameters=None, symtab=None):
     self.parent=parent
     self.symbol=function
+    # parameters are ignored
     if parameters : self.children=parameters[:]
     else : self.children=[]
 
@@ -443,6 +444,20 @@ class AssignStat(Stat):
   
   def collect_kills(self):
     return [self.symbol]
+    
+  def lower(self):
+    src = self.expr.destination()
+    dst = self.symbol
+    if self.offset != None:
+      off = self.offset.destination()
+    else:
+      off = None
+    store = StoreStat(dest=dst, symbol=src, offset=off, symtab=self.symtab)
+    if self.offset != None:
+      stats = [self.expr, self.offset, store]
+    else:
+      stats = [self.expr, store]
+    return self.parent.replace(self, StatList(children=stats, symtab=self.symtab))
 
 
 class BranchStat(Stat):   # ll
@@ -474,14 +489,17 @@ class EmptyStat(Stat):  # ll
 
 
 class StoreStat(Stat):
-  # stores its children to the specified register-stored symbol
-  def __init__(self, parent=None, dest=None, symbol=None, symtab=None):
+  # store the symbol to the specified destination + offset
+  def __init__(self, parent=None, dest=None, offset=None, symbol=None,  symtab=None):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
+    self.dest = dest
     if self.dest.alloct != 'global' and self.dest.alloct != 'auto':
       raise RuntimeError('store not to memory')
-    self.dest = dest
+    self.offset = offset
+    if self.offset != None and self.offset.alloct != 'reg':
+      raise RuntimeError('offset not in register')
     
   def collect_uses(self):
     return [self.symbol]
@@ -493,6 +511,8 @@ class StoreStat(Stat):
     return self.dest
   
   def __repr__(self):
+    if self.offset != None:
+      return '[ &(' + `self.dest` + ') + '+`self.offset`+'] <- ' + `self.symbol`
     return `self.dest` + ' <- ' + `self.symbol`
 
 
@@ -522,7 +542,7 @@ class LoadStat(Stat):
     if self.offset == None:
       return `self.dest` + ' <- ' + `self.symbol`
     else:
-      return `self.dest` + ' <- ' + `self.symbol` + ' + ' + `self.offset`
+      return `self.dest` + ' <- [ &(' + `self.symbol` + ') + ' + `self.offset`+' ]'
     
     
 class LoadImmStat(Stat):
