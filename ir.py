@@ -266,14 +266,45 @@ class Expr(IRNode):
       try : uses += c.collect_uses()
       except AttributeError : pass
     return uses
+    
 
 class BinExpr(Expr):
   def getOperands(self):
     return self.children[1:]
+    
+  def lower(self):
+    srca = self.children[1].destination();
+    srcb = self.children[2].destination();
+    
+    # type promotion
+    if srca.stype.basetype == 'Float' or srcb.stype.basetype == 'Float':
+      desttype = Type('', max(srca.stype.size, srcb.stype.size), 'Float')
+    else:
+      if (srca.stype.qual_list != None and 'unsigned' in srca.stype.qual_list) \
+          and \
+         (srcb.stype.qual_list != None and 'unsigned' in srcb.stype.qual_list):
+        desttype = Type('', max(srca.stype.size, srcb.stype.size), 'Int', ['unsigned'])
+      else:
+        desttype = Type('', max(srca.stype.size, srcb.stype.size), 'Int')
+    
+    dest = newTemporary(self.symtab, desttype)
+    
+    stmt = BinStat(dest=dest, op=self.children[0], srca=srca, srcb=srcb, symtab=self.symtab)
+    statl = [self.children[1], self.children[2], stmt]
+    return self.parent.replace(self, StatList(children=statl, symtab=self.symtab))
+
 
 class UnExpr(Expr):
   def getOperand(self):
     return self.children[1]
+    
+  def lower(self):
+    src = self.children[1].destination();
+    dest = newTemporary(self.symtab, src.stype)
+    stmt = UnaryStat(dest=dest, op=self.children[0], src=src, symtab=self.symtab)
+    statl = [self.children[1], stmt]
+    return self.parent.replace(self, StatList(children=statl, symtab=self.symtab))
+
 
 class CallExpr(Expr):
   def __init__(self, parent=None, function=None, parameters=None, symtab=None):
@@ -318,6 +349,7 @@ class CallStat(Stat):
   
   def collect_uses(self):
     return self.call.collect_uses() + self.symtab.exclude([standard_types['function'],standard_types['label']])
+
 
 class IfStat(Stat):
   def __init__(self, parent=None, cond=None, thenpart=None, elsepart=None, symtab=None):
@@ -366,6 +398,7 @@ class WhileStat(Stat):
     loop = BranchStat(None,Const(None, 1),entry_label,self.symtab)
     stat_list = StatList(self.parent, [branch,self.body,loop,exit_stat], self.symtab)
     return self.parent.replace(self,stat_list)
+  
   
 class ForStat(Stat):
   def __init__(self, parent=None, init=None, cond=None, step=None, body=None, symtab=None):
@@ -452,6 +485,9 @@ class StoreStat(Stat):
     
   def collect_kills(self):
     return [self.dest]
+    
+  def destination(self):
+    return self.dest
   
   def __repr__(self):
     return `self.dest` + ' <- ' + `self.symbol`
@@ -476,6 +512,8 @@ class LoadStat(Stat):
   def collect_kills(self):
     return [self.dest]
     
+  def destination(self):
+    return self.dest
     
   def __repr__(self):
     if self.offset == None:
@@ -497,6 +535,9 @@ class LoadImmStat(Stat):
     
   def collect_kills(self):
     return [self.dest]
+    
+  def destination(self):
+    return self.dest
     
   def __repr__(self):
     return `self.dest` + ' <- ' + `self.val`
@@ -597,6 +638,16 @@ class StatList(Stat):  # ll
     else :
       print 'Not flattening', id(self), 'into', id(self.parent), 'of type', type(self.parent)
       return False
+      
+  def destination(self):
+    for i in range(-1, -len(self.children)-1, -1):
+      try:
+        return self.children[i].destination()
+      except Exception:
+        pass
+    return None
+      
+      
 
 class Block(Stat):
   def __init__(self, parent=None, gl_sym=None, lc_sym=None, defs=None, body=None):
