@@ -282,13 +282,13 @@ class CallExpr(Expr):
     if parameters : self.children=parameters[:]
     else : self.children=[]
 
+
 class SymbolPlusOffset(IRNode):
   def __init__(self, parent=None, symbol=None, offset=None, symtab=None):
     self.symbol=symbol
     self.offset=offset
     self.symtab=symtab
     self.parent=parent
-    self.children=[self.offset, self.symbol]
     self.offset.parent = self
     self.symbol.parent = self
     
