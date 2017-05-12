@@ -349,6 +349,11 @@ class CallStat(Stat):
   
   def collect_uses(self):
     return self.call.collect_uses() + self.symtab.exclude([standard_types['function'],standard_types['label']])
+    
+  def lower(self):
+    dest = self.call.symbol
+    bst = BranchStat(target=dest, symtab=self.symtab, returns=True)
+    return self.parent.replace(self, bst)
 
 
 class IfStat(Stat):
@@ -471,8 +476,9 @@ class BranchStat(Stat):   # ll
     self.returns = returns
 
   def collect_uses(self):
-    try : return self.cond.collect_uses()
-    except AttributeError : return []
+    if not (self.cond is None):
+      return [self.cond]
+    return []
 
   def is_unconditional(self): 
     try :
@@ -486,7 +492,7 @@ class BranchStat(Stat):   # ll
       h = 'call '
     else:
       h = 'branch '
-    if self.cond is None:
+    if not (self.cond is None):
       c = 'on ' + `self.cond`
     else:
       c = ''
