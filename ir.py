@@ -369,9 +369,9 @@ class IfStat(Stat):
     if self.elsepart :
       then_label = standard_types['label']()
       self.thenpart.setLabel(else_label)
-      branch_to_then = BranchStat(None,self.cond,then_label,self.symtab)
+      branch_to_then = BranchStat(None,self.cond.destination(),then_label,self.symtab)
       branch_to_exit = BranchStat(None,None,exit_label,self.symtab)
-      stat_list = StatList(self.parent, [branch_to_then,self.elsepart,branch_to_exit,self.thenpart,exit_stat], self.symtab)
+      stat_list = StatList(self.parent, [self.cond,branch_to_then,self.elsepart,branch_to_exit,self.thenpart,exit_stat], self.symtab)
       return self.parent.replace(self,stat_list)
     else :
       branch_to_exit = BranchStat(None,UnExpr(None,['not', self.cond]),exit_label,self.symtab)
@@ -393,10 +393,10 @@ class WhileStat(Stat):
     exit_label = standard_types['label']()
     exit_stat = EmptyStat(self.parent,symtab=self.symtab)
     exit_stat.setLabel(exit_label)
-    branch = BranchStat(None,self.cond,exit_label,self.symtab)
-    branch.setLabel(entry_label)
-    loop = BranchStat(None,Const(None, 1),entry_label,self.symtab)
-    stat_list = StatList(self.parent, [branch,self.body,loop,exit_stat], self.symtab)
+    self.cond.setLabel(entry_label)
+    branch = BranchStat(None,self.cond.destination(),exit_label,self.symtab)
+    loop = BranchStat(None,None,entry_label,self.symtab)
+    stat_list = StatList(self.parent, [self.cond, branch,self.body,loop,exit_stat], self.symtab)
     return self.parent.replace(self,stat_list)
   
   
@@ -461,13 +461,14 @@ class AssignStat(Stat):
 
 
 class BranchStat(Stat):   # ll
-  def __init__(self, parent=None, cond=None, target=None, symtab=None):
+  def __init__(self, parent=None, cond=None, target=None, symtab=None, returns=False):
     self.parent=parent
     self.cond=cond # cond == None -> True
+    if not (self.cond is None) and self.cond.alloct != 'reg':
+      raise RuntimeError('condition not in register')
     self.target=target
-    self.cond.parent=self
-    self.target.parent=self
     self.symtab=symtab
+    self.returns = returns
 
   def collect_uses(self):
     try : return self.cond.collect_uses()
@@ -479,7 +480,18 @@ class BranchStat(Stat):   # ll
       return True
     except AttributeError :
       return False
-
+      
+  def __repr__(self):
+    if self.returns:
+      h = 'call '
+    else:
+      h = 'branch '
+    if self.cond is None:
+      c = 'on ' + `self.cond`
+    else:
+      c = ''
+    return h + c + ' to ' + `self.target`
+      
 
 class EmptyStat(Stat):  # ll
   pass
