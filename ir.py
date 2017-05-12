@@ -463,6 +463,38 @@ class AssignStat(Stat):
     else:
       stats = [self.expr, store]
     return self.parent.replace(self, StatList(children=stats, symtab=self.symtab))
+    
+    
+class PrintStat(Stat):
+  def __init__(self, parent=None, exp=None, symtab=None):  
+    self.parent=parent
+    self.expr=exp
+    self.symtab=symtab
+    self.children=[exp]
+    exp.parent = self
+
+  def collect_uses(self):
+    return self.expr.collect_uses()
+    
+  def lower(self):
+    pc = PrintCommand(src=self.expr.destination(), symtab=self.symtab)
+    stlist = StatList(children=[self.expr, pc], symtab=self.symtab)
+    return self.parent.replace(self, stlist)
+    
+    
+class PrintCommand(Stat):   # ll
+  def __init__(self, parent=None, src=None, symtab=None):
+    self.parent=parent
+    self.src=src
+    if src.alloct != 'reg':
+      raise RuntimeError('value not in register')
+    self.symtab = symtab
+    
+  def collect_uses(self):
+    return [self.src]
+
+  def __repr__(self):
+    return 'print ' + `self.src`
 
 
 class BranchStat(Stat):   # ll
@@ -506,7 +538,7 @@ class EmptyStat(Stat):  # ll
     return []
 
 
-class StoreStat(Stat):
+class StoreStat(Stat):  # ll
   # store the symbol to the specified destination + offset
   def __init__(self, parent=None, dest=None, offset=None, symbol=None,  symtab=None):
     self.parent=parent
@@ -534,7 +566,7 @@ class StoreStat(Stat):
     return `self.dest` + ' <- ' + `self.symbol`
 
 
-class LoadStat(Stat):
+class LoadStat(Stat):  # ll
   # load the value pointed to by the specified symbol + offset
   def __init__(self, parent=None, dest=None, symbol=None, offset=None, symtab=None):
     self.parent=parent
@@ -614,7 +646,7 @@ class UnaryStat(Stat):  # ll
   def __init__(self, parent=None, dest=None, op=None, src=None, symtab=None):
     self.parent = parent
     self.dest = dest
-    self.op = op     
+    self.op = op
     self.src = src
     self.symtab = symtab
     if self.dest.alloct != 'reg':
@@ -700,16 +732,6 @@ class Block(Stat):
     self.body.parent=self
     self.defs.parent=self
 
-class PrintStat(Stat):
-  def __init__(self, parent=None, exp=None, symtab=None):  
-    self.parent=parent
-    self.exp=exp
-    self.symtab=symtab
-    self.children=[exp]
-    exp.parent = self
-
-  def collect_uses(self):
-    return self.exp.collect_uses()
   
 
 #DEFINITIONS
