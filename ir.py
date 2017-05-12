@@ -143,6 +143,18 @@ class IRNode(object):
   
   def __repr__(self):
     from string import split, join
+    
+    try :
+      label=self.getLabel().name + ': '
+    except Exception, e :
+      label=''
+      pass
+    try:
+      hre = self.humanRepr()
+      return label + hre
+    except Exception:
+      pass
+    
     attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab', 'offset' ]) & set(dir(self))
 
     res=`type(self)`+' '+`id(self)`+' {\n'
@@ -150,11 +162,9 @@ class IRNode(object):
       res += 'parent = ' + `id(self.parent)` + '\n'
     else:
       res += '                                                                      <<<<<----- BUG? MISSING PARENT\n'
-    try :
-      label=self.getLabel()
-      res=label.name+': '+res
-    except Exception, e :
-      pass
+      
+    res=label+res
+      
     #print 'NODE', type(self), id(self)
     if 'children' in dir(self) and len(self.children) :
       res+='\tchildren:\n'
@@ -493,7 +503,7 @@ class PrintCommand(Stat):   # ll
   def collect_uses(self):
     return [self.src]
 
-  def __repr__(self):
+  def humanRepr(self):
     return 'print ' + `self.src`
 
 
@@ -519,7 +529,7 @@ class BranchStat(Stat):   # ll
     except AttributeError :
       return False
       
-  def __repr__(self):
+  def humanRepr(self):
     if self.returns:
       h = 'call '
     else:
@@ -560,7 +570,7 @@ class StoreStat(Stat):  # ll
   def destination(self):
     return self.dest
   
-  def __repr__(self):
+  def humanRepr(self):
     if self.offset != None:
       return '[ &(' + `self.dest` + ') + '+`self.offset`+'] <- ' + `self.symbol`
     return `self.dest` + ' <- ' + `self.symbol`
@@ -588,7 +598,7 @@ class LoadStat(Stat):  # ll
   def destination(self):
     return self.dest
     
-  def __repr__(self):
+  def humanRepr(self):
     if self.offset == None:
       return `self.dest` + ' <- ' + `self.symbol`
     else:
@@ -612,7 +622,7 @@ class LoadImmStat(Stat):
   def destination(self):
     return self.dest
     
-  def __repr__(self):
+  def humanRepr(self):
     return `self.dest` + ' <- ' + `self.val`
     
     
@@ -638,7 +648,7 @@ class BinStat(Stat):  # ll
   def destination(self):
     return self.dest
     
-  def __repr__(self):
+  def humanRepr(self):
     return `self.dest` + ' <- ' + `self.srca` + ' ' + self.op + ' ' + `self.srcb`
     
     
@@ -663,7 +673,7 @@ class UnaryStat(Stat):  # ll
   def destination(self):
     return self.dest
     
-  def __repr__(self):
+  def humanRepr(self):
     return `self.dest` + ' <- ' + self.op + ' ' + `self.src`
 
 
