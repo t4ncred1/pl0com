@@ -480,7 +480,6 @@ class PrintStat(Stat):
     self.parent=parent
     self.expr=exp
     self.symtab=symtab
-    self.children=[exp]
     exp.parent = self
 
   def collect_uses(self):
@@ -523,11 +522,9 @@ class BranchStat(Stat):   # ll
     return []
 
   def is_unconditional(self): 
-    try :
-      check=self.cond.value
+    if self.cond is None:
       return True
-    except AttributeError :
-      return False
+    return False
       
   def humanRepr(self):
     if self.returns:

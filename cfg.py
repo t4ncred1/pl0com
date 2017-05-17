@@ -9,7 +9,7 @@ class BasicBlock(object):
   def __init__(self, next=None, instrs=None, labels=None):
     '''Structure:
     Zero, one (next) or two (next, target_bb) successors
-    Keeps information on labels
+    Keeps information on labels (list of labels that refer to this BB)
     '''
     self.next=next
     if instrs : self.instrs=instrs
@@ -40,7 +40,7 @@ class BasicBlock(object):
     '''Print in graphviz dot format'''
     from string import join
     instrs = `self.labels`+'\\n' if len(self.labels) else ''
-    instrs+=join([ `type(i)` for i in self.instrs ],'\\n')
+    instrs+=join([ `i` for i in self.instrs ],'\\n')
     res=`id(self)`+' [label="BB'+`id(self)`+'{\\n'+instrs+'}"];\n'
     if self.next :
       res+=`id(self)`+' -> '+`id(self.next)`+' [label="'+`self.next.live_in`+'"];\n'
@@ -77,12 +77,13 @@ class BasicBlock(object):
   def getFunction(self):
     return self.instrs[0].getFunction()
 
+
 def stat_list_to_bb(sl):
   '''Support function for converting AST StatList to BBs'''
   from ir import BranchStat, CallStat
   bbs = []
-  newbb = []
-  labels = []
+  newbb = []      # accumulator for stmts to be inserted in the next BB
+  labels = []     # accumulator for the labels that refer to this BB
   for n in sl.children :
     try : 
       label=n.getLabel()
@@ -99,10 +100,11 @@ def stat_list_to_bb(sl):
       
     newbb.append(n)
     
-    if isinstance(n,BranchStat) or isinstance(n,CallStat) :
+    if isinstance(n,BranchStat) and not n.returns:
       bb = BasicBlock(None,newbb,labels)
       newbb=[]
-      if len(bbs) : bbs[-1].next=bb
+      if len(bbs):
+        bbs[-1].next=bb
       bbs.append(bb)
       labels=[]
 
@@ -179,7 +181,7 @@ class CFG(list):
     for bb in self :
       if label in bb.labels :
         return bb
-    raise Exception, `label`+' not found in any BB!'
+    raise Exception(`label`+' not found in any BB!')
 
   def liveness(self):
     '''Standard live variable analysis'''
