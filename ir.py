@@ -101,10 +101,17 @@ class Symbol(object):
     self.stype=stype
     self.value=value # if not None, it is a constant
     self.alloct=alloct
+    self.allocinfo = None
+    
+  def setAllocInfo(self, allocinfo):
+    self.allocinfo = allocinfo
 
   def __repr__(self):
-    return self.alloct + ' ' + self.stype.name + ' ' + self.name + \
+    base = self.alloct + ' ' + self.stype.name + ' ' + self.name + \
            ( self.value if type(self.value)==str else '')
+    if not self.allocinfo is None:
+      base = base + "; " + `self.allocinfo`
+    return base
 
 
 class SymbolTable(list):

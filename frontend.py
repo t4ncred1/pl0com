@@ -267,12 +267,18 @@ if __name__ == '__main__' :
   print '\n', res, '\n'
 
   print_dotty(res,"log.dot")
+  
+  from datalayout import *
+  print "\n\nDATALAYOUT\n\n"
+  performDataLayout(res)
+  print '\n', res, '\n'
 
   from cfg import *
   cfg=CFG(res)
   cfg.liveness()
   cfg.print_liveness()
   cfg.print_cfg_to_dot("cfg.dot")
+  
   from regalloc import *
   ra = minimal_register_allocator(cfg,8)
   reg_alloc = ra()
