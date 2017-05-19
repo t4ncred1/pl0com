@@ -18,12 +18,24 @@ class minimal_register_allocator(object):
   
 
   def __call__(self):
-    head = self.cfg.heads()['global']
-    
-    bbra = bb_register_allocator(head, self.nregs)
-    self.allocresult = bbra()
-    print "varliveness:\n", `bbra.varliveness`
-    print "ralloc:\n", `self.allocresult`
+    blockq = self.cfg.heads().values()
+    i = 0
+    while i < len(blockq):
+      n = blockq[i].succ()
+      nreal = []
+      for b in n:
+        if not(b in blockq):
+          nreal.append(b)    
+      blockq += nreal
+      
+      bbra = bb_register_allocator(blockq[i], self.nregs)
+      thisalloc = bbra()
+      print "block:", `id(blockq[i])`
+      print "varliveness:\n", `bbra.varliveness`
+      print "ralloc:\n", `thisalloc`, "\n"
+      self.allocresult.update(thisalloc)
+      i += 1
+
     return self.allocresult
     
     
@@ -42,7 +54,9 @@ class bb_register_allocator(object):
         if prevralloc[livevar]:
           self.vartoreg[livevar] = prevralloc[livevar]
     
+    # liveness of a variable on entry to each instruction
     self.varliveness = dict()   # variable -> set
+    
     self.allvars = bb.live_in.union(bb.live_out)
     self.allvars = self.allvars.union(bb.gen.union(bb.kill))
     self.allvars = removeNonRegs(self.allvars)
@@ -63,7 +77,6 @@ class bb_register_allocator(object):
         liveiset.append(i)
       i -= 1
     self.varliveness[var] = set(liveiset)
-    
     
     
   def testInterference(self, var1, var2):
