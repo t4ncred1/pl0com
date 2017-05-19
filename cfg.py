@@ -113,6 +113,10 @@ def stat_list_to_bb(sl):
     if len(bbs) : bbs[-1].next=bb
     bbs.append(bb)
   return bbs
+  
+  
+def removeNonRegs(set):
+  return {var for var in set if var.alloct == 'reg'}
 
 
 class CFG(list):

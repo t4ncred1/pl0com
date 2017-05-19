@@ -280,6 +280,7 @@ if __name__ == '__main__' :
   cfg.print_cfg_to_dot("cfg.dot")
   
   from regalloc import *
+  print "\n\nREGALLOC\n\n"
   ra = minimal_register_allocator(cfg,8)
   reg_alloc = ra()
   print reg_alloc

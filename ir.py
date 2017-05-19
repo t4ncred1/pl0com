@@ -354,6 +354,12 @@ class Stat(IRNode):
   
   def getLabel(self):
     return self.label
+    
+  def collect_uses(self):
+    return []
+    
+  def collect_kills(self):
+    return []
       
 
 class CallStat(Stat): 
