@@ -36,7 +36,7 @@ def performDataLayout(root):
 
   
 def performDataLayoutOfFunction(funcroot):
-  offs = -4  # prev fp
+  offs = 0  # prev fp
   prefix = "_l_" + funcroot.symbol.name + "_"
   for var in funcroot.body.local_symtab:
     if var.stype.size == 0:
