@@ -14,7 +14,7 @@ class minimal_register_allocator(object):
   def __init__(self,cfg,nregs):
     self.cfg=cfg
     self.nregs=nregs
-    self.allocresult={}
+    self.allocresult=RegisterAllocation(dict(), dict())
   
 
   def __call__(self):
@@ -39,6 +39,28 @@ class minimal_register_allocator(object):
     return self.allocresult
     
     
+class RegisterAllocation(object):
+
+  def __init__(self, vartoreg, spillsets):
+    self.vartoreg = vartoreg
+    self.spillsets = spillsets  # dict reg -> set(vars allocated to the same reg)
+    
+  def update(self, otherra):
+    self.vartoreg.update(otherra.vartoreg)
+    allregs = set(otherra.spillsets.keys()) | set(otherra.spillsets.keys())
+    for reg in allregs:
+      a = otherra.spillsets.get(reg)
+      b = self.spillsets.get(reg)
+      if a is None:
+        a = set()
+      if b is None:
+        b = set()
+      self.spillsets[reg] = a | b
+    
+  def __repr__(self):
+    return 'vartoreg = ' + `self.vartoreg` + '\nspillsets = ' + `self.spillsets`
+    
+    
     
 class bb_register_allocator(object):
 
@@ -55,7 +77,8 @@ class bb_register_allocator(object):
           self.vartoreg[livevar] = prevralloc[livevar]
     
     # liveness of a variable on entry to each instruction
-    self.varliveness = dict()   # variable -> set
+    # in order of start point
+    self.varliveness = []   # {var=var, liveness=[indexes]}
     
     self.allvars = bb.live_in.union(bb.live_out)
     self.allvars = self.allvars.union(bb.gen.union(bb.kill))
@@ -63,47 +86,78 @@ class bb_register_allocator(object):
     self.allvars = list(self.allvars)
     
     
-  def computeLivenessIntervalsForVar(self, var):
-    liveiset = []
-    on = False
+  def computeLivenessIntervals(self):
+    vartolasti = dict()
+    livevars = set()
     i = len(self.bb.instrs) - 1
+    
     while i >= 0:
       inst = self.bb.instrs[i]
-      if var in inst.collect_kills():
-        on = False
-      if var in inst.collect_uses():
-        on = True
-      if on:
-        liveiset.append(i)
+      kills = removeNonRegs(inst.collect_kills())
+      uses = removeNonRegs(inst.collect_uses())
+      livevars -= kills
+      livevars |= uses
+      
+      for var in kills:
+        lasti = vartolasti.get(var)
+        if lasti:
+          self.varliveness.insert(0, {"var":var, "interv":lasti})
+      
+      for var in livevars:
+        lasti = vartolasti.get(var)
+        if lasti is None:
+          lasti = []
+        lasti.insert(0, i)
+        vartolasti[var] = lasti
+        
       i -= 1
-    self.varliveness[var] = set(liveiset)
-    
-    
-  def testInterference(self, var1, var2):
-    li1 = self.varliveness[var1]
-    li2 = self.varliveness[var2]
-    inters = li1 & li2
-    return len(inters) > 0
-    
+      
+    for var in livevars:
+      lasti = vartolasti[var]
+      if lasti:
+        self.varliveness.insert(0, [var, lasti])
+          
     
   def __call__(self):
-    for i in range(0, len(self.allvars)):
-      var = self.allvars[i]
-      self.computeLivenessIntervalsForVar(var)
+    self.computeLivenessIntervals()
+    
+    live = []
+    spillsets = {}
+    freeregs = set(range(0, self.nregs))
+    
+    for livei in self.varliveness:
+      start = livei["interv"][0]
       
-      freeregs = set(range(0, self.nregs))
-      for j in range(0, i):
-        var2 = self.allvars[j]
-        if self.testInterference(var, var2):
-          freeregs.discard(self.vartoreg[var2])
-      
+      #expire old intervals
+      i = 0
+      while i < len(live):
+        notlivecandidate = live[i]
+        if notlivecandidate["interv"][-1] < start:
+          live.pop(i)
+          freeregs.add(self.vartoreg[notlivecandidate["var"]])
+        i += 1
+          
       if len(freeregs) == 0:
-        print "varliveness:\n", `self.varliveness`
-        print "ralloc:\n", `self.vartoreg`
-        raise Exception, "spill! " + `var`
-      self.vartoreg[var] = freeregs.pop()
+        tospill = live[-1]
+        reg = self.vartoreg[tospill["var"]]
+        self.vartoreg[livei["var"]] = reg
+        # keep the longest interval
+        if tospill["interv"][-1] < livei["interv"][-1]:
+          live.pop(-1)
+          live.append(livei)
+        # add these vars to the spill set for this registers so that we can
+        # generate the code correctly
+        spillset = spillsets.get(reg)
+        if spillset is None:
+          spillset = set()
+        spillset |= set([tospill["var"], livei["var"]])
+        spillsets[reg] = spillset
+        
+      else:
+        self.vartoreg[livei["var"]] = freeregs.pop()
+        live.append(livei)
       
-    return self.vartoreg
+    return RegisterAllocation(self.vartoreg, spillsets)
 
       
     
