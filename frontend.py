@@ -288,7 +288,7 @@ if __name__ == '__main__' :
   reg_alloc = ra()
   print reg_alloc
   
-  from codegenhelp import *
+  from codegen import *
   print "\n\nCODEGEN\n\n"
   print generateCode(res, reg_alloc)
   

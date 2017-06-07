@@ -117,14 +117,6 @@ class Symbol(object):
       base = base + "; " + `self.allocinfo`
     return base
     
-  def codegen(self, regalloc):
-    if self.allocinfo is None:
-      return ""
-    if not isinstance(self.allocinfo, LocalSymbolLayout):
-      return self.allocinfo.symname + ':\t.space ' + `self.allocinfo.bsize` + "\n"
-    else:
-      return self.allocinfo.symname + ':\t.equ ' + `self.allocinfo.fpreloff` + "\n"
-
 
 class SymbolTable(list):
   def find(self, name):
@@ -238,18 +230,6 @@ class IRNode(object):
       return self.parent
     else :
       return self.parent.getFunction()
-      
-  
-  def codegen(self, regalloc):
-    res = "; irnode " + `id(self)` + "\n"
-    if 'children' in dir(self) and len(self.children):
-      for node in self.children:
-        try: 
-          res += node.codegen(regalloc)
-        except Exception as e: 
-          res += "; node " + `id(node)` + " did not generate any code\n"
-          res += "; exc: " + `e` + "\n"
-    return res
       
 
 #CONST and VAR  
@@ -695,25 +675,6 @@ class BinStat(Stat):  # ll
   def humanRepr(self):
     return `self.dest` + ' <- ' + `self.srca` + ' ' + self.op + ' ' + `self.srcb`
     
-  def codegen(self, regalloc):
-    res = spillLoadIfNecessary(self.srca, regalloc)
-    res += spillLoadIfNecessary(self.srcb, regalloc)
-    ra = getRegisterForVariable(self.srca, regalloc)
-    rb = getRegisterForVariable(self.srcb, regalloc)
-    rd = getRegisterForVariable(self.dest, regalloc)
-    param = ra + ', ' + rb + ', ' + rd
-    if self.op == "plus":
-      res += 'add ' + param + '\n'
-    elif self.op == "minus":
-      res += 'sub ' + param + '\n'
-    elif self.op == "times":
-      res += 'mul ' + param + '\n'
-    elif self.op == "slash":
-      res += 'div ' + param + '\n'
-    else:
-      raise Exception, "operation " + `self.op` + " unexpected"
-    return res + spillStoreIfNecessary(self.dest, regalloc)
-    
     
 class UnaryStat(Stat):  # ll
   def __init__(self, parent=None, dest=None, op=None, src=None, symtab=None):
@@ -804,18 +765,6 @@ class Block(Stat):
     self.defs=defs
     self.body.parent=self
     self.defs.parent=self
-    
-  def codegen(self, regalloc):
-    res = "; block\n"
-    for sym in self.local_symtab:
-      res += sym.codegen(regalloc)
-    if self.parent is None:
-      res += "_start:\n"
-    try:
-      res += self.body.codegen(regalloc)
-    except Exception:
-      pass
-    return res
 
   
 
