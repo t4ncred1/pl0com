@@ -285,10 +285,17 @@ class ArrayElement(IRNode):
   def lower(self):
     global standard_types
     dest = newTemporary(self.symtab, self.symbol.stype)
-    statl = []
+    off = self.offset.destination()
     
-    statl.append(self.offset);
-    statl.append(LoadStat(dest=dest, symbol=self.symbol, offset=self.offset.destination(), symtab=self.symtab))    
+    statl = [self.offset]
+    
+    ptrreg = newTemporary(self.symtab, standard_types['uint'])
+    loadptr = LoadPtrToSym(dest=ptrreg, symbol=self.symbol, symtab=self.symtab)
+    src = newTemporary(self.symtab, standard_types['uint'])
+    add = BinStat(dest=src, op='plus', srca=ptrreg, srcb=off, symtab=self.symtab)
+    statl += [loadptr, add]
+    
+    statl += [LoadStat(dest=dest, symbol=src, symtab=self.symtab)]  
     return self.parent.replace(self, StatList(children=statl, symtab=self.symtab))
     
     
@@ -621,20 +628,15 @@ class StoreStat(Stat):  # ll
 
 class LoadStat(Stat):  # ll
   # load the value pointed to by the specified symbol + offset
-  def __init__(self, parent=None, dest=None, symbol=None, offset=None, symtab=None):
+  def __init__(self, parent=None, dest=None, symbol=None, symtab=None):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
     self.dest = dest
     if self.dest.alloct != 'reg':
       raise RuntimeError('load not to register')
-    self.offset = offset
-    if self.offset != None and self.offset.alloct != 'reg':
-      raise RuntimeError('offset not in register')
 
   def collect_uses(self):
-    if self.offset:
-      return [self.symbol, self.offset]
     return [self.symbol]
     
   def collect_kills(self):
@@ -644,10 +646,10 @@ class LoadStat(Stat):  # ll
     return self.dest
     
   def humanRepr(self):
-    if self.offset == None:
-      return `self.dest` + ' <- ' + `self.symbol`
+    if self.symbol.alloct == 'reg':
+      return `self.dest` + ' <- [' + `self.symbol` + ']'
     else:
-      return `self.dest` + ' <- [ &(' + `self.symbol` + ') + ' + `self.offset`+' ]'
+      return `self.dest` + ' <- ' + `self.symbol`
     
     
 class LoadImmStat(Stat):
