@@ -17,14 +17,14 @@ Symbol.codegen = symbol_codegen
 
 
 def irnode_codegen(self, regalloc):
-  res = "; irnode " + `id(self)` + "\n"
+  res = "\t; irnode " + `id(self)` + "\n"
   if 'children' in dir(self) and len(self.children):
     for node in self.children:
       try: 
         res += node.codegen(regalloc)
       except Exception as e: 
-        res += "; node " + `id(node)` + " did not generate any code\n"
-        res += "; exc: " + `e` + "\n"
+        res += "\t; node " + `id(node)` + " did not generate any code\n"
+        res += "\t; exc: " + `e` + "\n"
   return res
   
 IRNode.codegen = irnode_codegen
@@ -53,13 +53,13 @@ def binstat_codegen(self, regalloc):
   rd = regalloc.getRegisterForVariable(self.dest)
   param = ra + ', ' + rb + ', ' + rd
   if self.op == "plus":
-    res += 'add ' + param + '\n'
+    res += '\tadd ' + param + '\n'
   elif self.op == "minus":
-    res += 'sub ' + param + '\n'
+    res += '\tsub ' + param + '\n'
   elif self.op == "times":
-    res += 'mul ' + param + '\n'
+    res += '\tmul ' + param + '\n'
   elif self.op == "slash":
-    res += 'div ' + param + '\n'
+    res += '\tdiv ' + param + '\n'
   else:
     raise Exception, "operation " + `self.op` + " unexpected"
   return res + regalloc.genSpillStoreIfNecessary(self.dest)
