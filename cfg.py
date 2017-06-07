@@ -20,12 +20,15 @@ class BasicBlock(object):
     else : self.labels = []
     self.target_bb=None
         
+    # liveness in respect to the whole cfg
     self.live_in  = set([])
     self.live_out = set([])
+    
+    # compute kill and gen set for this block, as it was a black box 
     self.kill = set([]) # assigned
     self.gen = set([]) # use before assign
     from ir import AssignStat, StoreStat
-    for i in instrs :
+    for i in instrs:
       uses = set(i.collect_uses())
       uses.difference_update(self.kill)
       self.gen.update(uses)

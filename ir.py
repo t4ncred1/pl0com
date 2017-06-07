@@ -572,6 +572,8 @@ class StoreStat(Stat):  # ll
       raise RuntimeError('offset not in register')
     
   def collect_uses(self):
+    if self.offset:
+      return [self.symbol, self.offset]
     return [self.symbol]
     
   def collect_kills(self):
@@ -600,6 +602,8 @@ class LoadStat(Stat):  # ll
       raise RuntimeError('offset not in register')
 
   def collect_uses(self):
+    if self.offset:
+      return [self.symbol, self.offset]
     return [self.symbol]
     
   def collect_kills(self):
@@ -670,9 +674,9 @@ class UnaryStat(Stat):  # ll
     self.src = src
     self.symtab = symtab
     if self.dest.alloct != 'reg':
-      raise RuntimeError('binstat dest not to register')
+      raise RuntimeError('unarystat dest not to register')
     if self.src.alloct != 'reg':
-      raise RuntimeError('binstat src not in register')
+      raise RuntimeError('unarystat src not in register')
     
   def collect_kills(self):
     return [self.dest]
