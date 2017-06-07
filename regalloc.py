@@ -75,6 +75,7 @@ class bb_register_allocator(object):
       for livevar in livein:
         if prevralloc[livevar]:
           self.vartoreg[livevar] = prevralloc[livevar]
+          raise Exception, "register inheritance not fully implemented"
     
     # liveness of a variable on entry to each instruction
     # in order of start point
@@ -145,7 +146,7 @@ class bb_register_allocator(object):
         if tospill["interv"][-1] < livei["interv"][-1]:
           live.pop(-1)
           live.append(livei)
-        # add these vars to the spill set for this registers so that we can
+        # add these vars to the spill set for this register so that we can
         # generate the code correctly
         spillset = spillsets.get(reg)
         if spillset is None:
