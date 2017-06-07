@@ -7,17 +7,24 @@ from datalayout import *
 def getRegisterString(regid):
   return '%r'+`regid`
   
-  
-def spillLoadIfNecessary(var, regalloc):
+
+# class RegisterAllocation:
+
+def genSpillLoadIfNecessary(self, var):
   # todo
   return ''
   
   
-def getRegisterForVariable(var, regalloc):
-  return getRegisterString(regalloc.vartoreg[var])
+def getRegisterForVariable(self, var):
+  return getRegisterString(self.vartoreg[var])
 
 
-def spillStoreIfNecessary(var, regalloc):
+def genSpillStoreIfNecessary(self, var):
   # todo
   return ''
+
+
+RegisterAllocation.genSpillLoadIfNecessary = genSpillLoadIfNecessary
+RegisterAllocation.getRegisterForVariable = getRegisterForVariable
+RegisterAllocation.genSpillStoreIfNecessary = genSpillStoreIfNecessary
 

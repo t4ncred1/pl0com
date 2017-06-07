@@ -46,11 +46,11 @@ Block.codegen = block_codegen
 
 
 def binstat_codegen(self, regalloc):
-  res = spillLoadIfNecessary(self.srca, regalloc)
-  res += spillLoadIfNecessary(self.srcb, regalloc)
-  ra = getRegisterForVariable(self.srca, regalloc)
-  rb = getRegisterForVariable(self.srcb, regalloc)
-  rd = getRegisterForVariable(self.dest, regalloc)
+  res = regalloc.genSpillLoadIfNecessary(self.srca)
+  res += regalloc.genSpillLoadIfNecessary(self.srcb)
+  ra = regalloc.getRegisterForVariable(self.srca)
+  rb = regalloc.getRegisterForVariable(self.srcb)
+  rd = regalloc.getRegisterForVariable(self.dest)
   param = ra + ', ' + rb + ', ' + rd
   if self.op == "plus":
     res += 'add ' + param + '\n'
@@ -62,7 +62,7 @@ def binstat_codegen(self, regalloc):
     res += 'div ' + param + '\n'
   else:
     raise Exception, "operation " + `self.op` + " unexpected"
-  return res + spillStoreIfNecessary(self.dest, regalloc)
+  return res + regalloc.genSpillStoreIfNecessary(self.dest)
   
 BinStat.codegen = binstat_codegen
 
