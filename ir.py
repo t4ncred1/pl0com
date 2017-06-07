@@ -486,15 +486,19 @@ class AssignStat(Stat):
   def lower(self):
     src = self.expr.destination()
     dst = self.symbol
-    if self.offset != None:
+    
+    stats = [self.expr]
+    
+    if self.offset:
       off = self.offset.destination()
-    else:
-      off = None
-    store = StoreStat(dest=dst, symbol=src, offset=off, symtab=self.symtab)
-    if self.offset != None:
-      stats = [self.expr, self.offset, store]
-    else:
-      stats = [self.expr, store]
+      ptrreg = newTemporary(self.symtab, standard_types['uint'])
+      loadptr = LoadPtrToSym(dest=ptrreg, symbol=dst, symtab=self.symtab)
+      dst = newTemporary(self.symtab, standard_types['uint'])
+      add = BinStat(dest=dst, op='plus', srca=ptrreg, srcb=off, symtab=self.symtab)
+      stats += [self.offset, loadptr, add]
+      
+    stats += [StoreStat(dest=dst, symbol=src, symtab=self.symtab)]
+
     return self.parent.replace(self, StatList(children=stats, symtab=self.symtab))
     
     
@@ -566,24 +570,41 @@ class EmptyStat(Stat):  # ll
 
   def collect_uses(self):
     return []
+    
+    
+class LoadPtrToSym(Stat):  # ll
+  def __init__(self, parent=None, dest=None, symbol=None, symtab=None):
+    self.parent = parent
+    self.symbol = symbol
+    self.symtab = symtab
+    self.dest = dest
+    if self.symbol.alloct == 'reg':
+      raise RuntimeError('symbol not in memory')
+    if self.dest.alloct != 'reg':
+      raise RuntimeError('dest not to register')
+      
+  def collect_uses(self):
+    return [self.symbol]
+    
+  def collect_kills(self):
+    return [self.dest]
+    
+  def destination(self):
+    return self.dest
+    
+  def humanRepr(self):
+    return `self.dest` + ' <- &(' + `self.symbol` + ')'
 
 
 class StoreStat(Stat):  # ll
   # store the symbol to the specified destination + offset
-  def __init__(self, parent=None, dest=None, offset=None, symbol=None,  symtab=None):
+  def __init__(self, parent=None, dest=None, symbol=None,  symtab=None):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
     self.dest = dest
-    if self.dest.alloct != 'global' and self.dest.alloct != 'auto':
-      raise RuntimeError('store not to memory')
-    self.offset = offset
-    if self.offset != None and self.offset.alloct != 'reg':
-      raise RuntimeError('offset not in register')
     
   def collect_uses(self):
-    if self.offset:
-      return [self.symbol, self.offset]
     return [self.symbol]
     
   def collect_kills(self):
@@ -593,8 +614,8 @@ class StoreStat(Stat):  # ll
     return self.dest
   
   def humanRepr(self):
-    if self.offset != None:
-      return '[ &(' + `self.dest` + ') + '+`self.offset`+'] <- ' + `self.symbol`
+    if self.dest.alloct == 'reg':
+      return '[' + `self.dest` + '] <- ' + `self.symbol`
     return `self.dest` + ' <- ' + `self.symbol`
 
 
