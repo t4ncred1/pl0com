@@ -12,6 +12,7 @@ Includes lowering and flattening functions'''
 # larger expressions: last temporary used is the result
 
 from regalloc import *
+from codegenhelp import *
 from datalayout import *
 
 #SYMBOLS AND TYPES
@@ -695,20 +696,23 @@ class BinStat(Stat):  # ll
     return `self.dest` + ' <- ' + `self.srca` + ' ' + self.op + ' ' + `self.srcb`
     
   def codegen(self, regalloc):
-    ra = '%r'+`regalloc.vartoreg[self.srca]`
-    rb = '%r'+`regalloc.vartoreg[self.srcb]`
-    rd = '%r'+`regalloc.vartoreg[self.dest]`
+    res = spillLoadIfNecessary(self.srca, regalloc)
+    res += spillLoadIfNecessary(self.srcb, regalloc)
+    ra = getRegisterForVariable(self.srca, regalloc)
+    rb = getRegisterForVariable(self.srcb, regalloc)
+    rd = getRegisterForVariable(self.dest, regalloc)
     param = ra + ', ' + rb + ', ' + rd
     if self.op == "plus":
-      return 'add ' + param + '\n'
+      res += 'add ' + param + '\n'
     elif self.op == "minus":
-      return 'sub ' + param + '\n'
+      res += 'sub ' + param + '\n'
     elif self.op == "times":
-      return 'mul ' + param + '\n'
+      res += 'mul ' + param + '\n'
     elif self.op == "slash":
-      return 'div ' + param + '\n'
+      res += 'div ' + param + '\n'
     else:
       raise Exception, "operation " + `self.op` + " unexpected"
+    return res + spillStoreIfNecessary(self.dest, regalloc)
     
     
 class UnaryStat(Stat):  # ll
