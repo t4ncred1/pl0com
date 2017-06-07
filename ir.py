@@ -84,7 +84,7 @@ standard_types = {
   'uchar': Type('uchar',  8, 'Int', ['unsigned']),
   'uint' : Type('uint',  32, 'Int', ['unsigned']),
   'ushort': Type('ushort',16,'Int', ['unsigned']),
-  'float': Type('float', 32, 'Float'),
+  #'float': Type('float', 32, 'Float'),
   'label': LabelType(),
   'function' : FunctionType(),
 }
