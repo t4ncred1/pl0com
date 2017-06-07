@@ -67,6 +67,42 @@ def binstat_codegen(self, regalloc):
 BinStat.codegen = binstat_codegen
 
 
+def print_codegen(self, regalloc):
+  res = regalloc.genSpillLoadIfNecessary(self.src)
+  rp = regalloc.getRegisterForVariable(self.src)
+  res += '\tpush ' + getRegisterString(0) + '\n'
+  res += '\tmov ' + getRegisterString(0) + ', ' + rp + '\n'
+  res += '\tbl __print\n'
+  res += '\tpop ' + getRegisterString(0) + '\n'
+  return res
+  
+PrintCommand.codegen = print_codegen
+
+
+def branch_codegen(self, regalloc):
+  targetl = self.target.name
+  if not self.returns:
+    if self.cond is None:
+      return '\tb ' + targetl + '\n'
+    else:
+      res = regalloc.genSpillLoadIfNecessary(self.cond)
+      rcond = regalloc.getRegisterForVariable(self.cond)
+      return res + '\tcbnz ' + rcond + ', ' + targetl + '\n'
+  else:
+    if self.cond is None:
+      return '\tbl ' + targetl + '\n'
+    else:
+      res = regalloc.genSpillLoadIfNecessary(self.cond)
+      rcond = regalloc.getRegisterForVariable(self.cond)
+      res += '\tcbz ' + rcond + ', 1f\n'
+      res += '\tbl ' + targetl + '\n'
+      res += '1:'
+      return res
+  return '; impossible!\n'
+  
+BranchStat.codegen = branch_codegen
+
+
 def generateCode(program, regalloc): 
   return program.codegen(regalloc)
   

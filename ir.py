@@ -372,7 +372,7 @@ class Stat(IRNode):
     return []
       
 
-class CallStat(Stat):  # LL
+class CallStat(Stat):
   '''Procedure call (non returning)'''
   def __init__(self, parent=None, call_expr=None, symtab=None):
     self.parent=parent
