@@ -5,7 +5,10 @@ __doc__ = '''PL/0 recursive descent parser adapted from Wikipedia'''
 from ir import *
 from logger import logger
 
-symbols =  [ 'ident', 'number', 'lparen', 'rparen', 'times', 'slash', 'plus', 'minus', 'eql', 'neq', 'lss', 'leq', 'gtr', 'geq', 'callsym', 'beginsym', 'semicolon', 'endsym', 'ifsym', 'whilesym', 'becomes', 'thensym', 'dosym', 'constsym', 'comma', 'varsym', 'procsym', 'period', 'oddsym' ]
+symbols =  [ 'ident', 'number', 'lparen', 'rparen', 'times', 'slash', 'plus', 
+'minus', 'eql', 'neq', 'lss', 'leq', 'gtr', 'geq', 'callsym', 'beginsym', 
+'semicolon', 'endsym', 'ifsym', 'whilesym', 'becomes', 'thensym', 'dosym', 
+'constsym', 'comma', 'varsym', 'procsym', 'period', 'oddsym' ]
 
 sym = None
 value = None
@@ -278,9 +281,15 @@ if __name__ == '__main__' :
   cfg.liveness()
   cfg.print_liveness()
   cfg.print_cfg_to_dot("cfg.dot")
-  
+   
   from regalloc import *
   print "\n\nREGALLOC\n\n"
   ra = minimal_register_allocator(cfg,8)
   reg_alloc = ra()
   print reg_alloc
+  
+  from codegenhelp import *
+  print "\n\nCODEGEN\n\n"
+  print generateCode(res, reg_alloc)
+  
+  

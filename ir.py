@@ -11,6 +11,9 @@ Includes lowering and flattening functions'''
 # for doing the computations. The expression tree gets flattened to a stmt list
 # larger expressions: last temporary used is the result
 
+from regalloc import *
+from datalayout import *
+
 #SYMBOLS AND TYPES
 basetypes = [ 'Int', 'Float', 'Label', 'Struct', 'Function' ]
 qualifiers = [ 'unsigned' ]
@@ -112,6 +115,14 @@ class Symbol(object):
     if not self.allocinfo is None:
       base = base + "; " + `self.allocinfo`
     return base
+    
+  def codegen(self, regalloc):
+    if self.allocinfo is None:
+      return ""
+    if not isinstance(self.allocinfo, LocalSymbolLayout):
+      return self.allocinfo.symname + ':\t.space ' + `self.allocinfo.bsize` + "\n"
+    else:
+      return self.allocinfo.symname + ':\t.equ ' + `self.allocinfo.fpreloff` + "\n"
 
 
 class SymbolTable(list):
@@ -132,9 +143,11 @@ class SymbolTable(list):
     return [ symb for symb in self if symb.stype not in barred_types ]
 
 
+
 # IRNODE
 
 class IRNode(object):
+
   def __init__(self,parent=None, children=None, symtab=None):
     self.parent=parent
     if children : 
@@ -147,6 +160,7 @@ class IRNode(object):
     else : 
       self.children=[]
     self.symtab=symtab
+  
   
   def __repr__(self):
     from string import split, join
@@ -185,6 +199,7 @@ class IRNode(object):
     res+='}'
     return res
 
+
   def navigate(self, action):
     attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab', 'offset']) & set(dir(self))
     if 'children' in dir(self) and len(self.children) :
@@ -198,6 +213,7 @@ class IRNode(object):
         print 'successfully navigated attr ',d,' of', type(self), id(self)
       except Exception : pass
     action(self)
+  
   
   def replace(self, old, new):
     new.parent = self
@@ -214,12 +230,25 @@ class IRNode(object):
         pass
     return False
     
+    
   def getFunction(self):
     if not self.parent : return 'global'
     elif type(self.parent)== FunctionDef :
       return self.parent
     else :
       return self.parent.getFunction()
+      
+  
+  def codegen(self, regalloc):
+    res = "; irnode " + `id(self)` + "\n"
+    if 'children' in dir(self) and len(self.children):
+      for node in self.children:
+        try: 
+          res += node.codegen(regalloc)
+        except Exception as e: 
+          res += "; node " + `id(node)` + " did not generate any code\n"
+          res += "; exc: " + `e` + "\n"
+    return res
       
 
 #CONST and VAR  
@@ -362,7 +391,7 @@ class Stat(IRNode):
     return []
       
 
-class CallStat(Stat): 
+class CallStat(Stat):  # LL
   '''Procedure call (non returning)'''
   def __init__(self, parent=None, call_expr=None, symtab=None):
     self.parent=parent
@@ -665,6 +694,22 @@ class BinStat(Stat):  # ll
   def humanRepr(self):
     return `self.dest` + ' <- ' + `self.srca` + ' ' + self.op + ' ' + `self.srcb`
     
+  def codegen(self, regalloc):
+    ra = '%r'+`regalloc.vartoreg[self.srca]`
+    rb = '%r'+`regalloc.vartoreg[self.srcb]`
+    rd = '%r'+`regalloc.vartoreg[self.dest]`
+    param = ra + ', ' + rb + ', ' + rd
+    if self.op == "plus":
+      return 'add ' + param + '\n'
+    elif self.op == "minus":
+      return 'sub ' + param + '\n'
+    elif self.op == "times":
+      return 'mul ' + param + '\n'
+    elif self.op == "slash":
+      return 'div ' + param + '\n'
+    else:
+      raise Exception, "operation " + `self.op` + " unexpected"
+    
     
 class UnaryStat(Stat):  # ll
   def __init__(self, parent=None, dest=None, op=None, src=None, symtab=None):
@@ -755,6 +800,18 @@ class Block(Stat):
     self.defs=defs
     self.body.parent=self
     self.defs.parent=self
+    
+  def codegen(self, regalloc):
+    res = "; block\n"
+    for sym in self.local_symtab:
+      res += sym.codegen(regalloc)
+    if self.parent is None:
+      res += "_start:\n"
+    try:
+      res += self.body.codegen(regalloc)
+    except Exception:
+      pass
+    return res
 
   
 
