@@ -580,7 +580,7 @@ class EmptyStat(Stat):  # ll
     
     
 class LoadPtrToSym(Stat):  # ll
-  def __init__(self, parent=None, dest=None, symbol=None, symtab=None):
+  def __init__(self, parent=None, dest=None, symbol=None,  symtab=None):
     self.parent = parent
     self.symbol = symbol
     self.symtab = symtab
@@ -605,16 +605,24 @@ class LoadPtrToSym(Stat):  # ll
 
 class StoreStat(Stat):  # ll
   # store the symbol to the specified destination + offset
-  def __init__(self, parent=None, dest=None, symbol=None,  symtab=None):
+  def __init__(self, parent=None, dest=None, symbol=None, killhint=None, symtab=None):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
     self.dest = dest
+    self.killhint = killhint
     
   def collect_uses(self):
+    if self.dest.alloct == 'reg':
+      return [self.symbol, self.dest]
     return [self.symbol]
     
   def collect_kills(self):
+    if self.dest.alloct == 'reg':
+      if self.killhint:
+        return [self.killhint]
+      else:
+        return []
     return [self.dest]
     
   def destination(self):
@@ -628,15 +636,18 @@ class StoreStat(Stat):  # ll
 
 class LoadStat(Stat):  # ll
   # load the value pointed to by the specified symbol + offset
-  def __init__(self, parent=None, dest=None, symbol=None, symtab=None):
+  def __init__(self, parent=None, dest=None, symbol=None, usehint=None, symtab=None):
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
     self.dest = dest
+    self.usehint = usehint
     if self.dest.alloct != 'reg':
       raise RuntimeError('load not to register')
 
   def collect_uses(self):
+    if self.usehint:
+      return [self.symbol, self.usehint]
     return [self.symbol]
     
   def collect_kills(self):
