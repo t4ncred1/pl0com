@@ -17,10 +17,15 @@ Symbol.codegen = symbol_codegen
 
 
 def irnode_codegen(self, regalloc):
-  res = "\t; irnode " + `id(self)` + "\n"
+  res = "\t; irnode " + `id(self)` + ' type ' + `type(self)` + "\n"
   if 'children' in dir(self) and len(self.children):
     for node in self.children:
       try: 
+        try:
+          labl = node.getLabel()
+          res += labl.name + ':\n'
+        except Exception:
+          pass
         res += node.codegen(regalloc)
       except Exception as e: 
         res += "\t; node " + `id(node)` + " did not generate any code\n"
