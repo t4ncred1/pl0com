@@ -116,7 +116,7 @@ class bb_register_allocator(object):
     for var in livevars:
       lasti = vartolasti[var]
       if lasti:
-        self.varliveness.insert(0, [var, lasti])
+        self.varliveness.insert(0, {"var":var, "interv":lasti})
           
     
   def __call__(self):
