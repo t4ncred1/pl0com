@@ -608,6 +608,8 @@ class StoreStat(Stat):  # ll
   def __init__(self, parent=None, dest=None, symbol=None, killhint=None, symtab=None):
     self.parent=parent
     self.symbol=symbol
+    if self.symbol.alloct != 'reg':
+      raise RuntimeError('store not from register')
     self.symtab=symtab
     self.dest = dest
     self.killhint = killhint
