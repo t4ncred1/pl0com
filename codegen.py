@@ -207,6 +207,27 @@ def loadstat_codegen(self, regalloc):
 LoadStat.codegen = loadstat_codegen
 
 
+def loadimm_codegen(self, regalloc):
+  rd = regalloc.getRegisterForVariable(self.dest)
+  val = self.val
+  if val >= -4096 and val < 4096:
+    if val < 0:
+      rv = -val - 1
+      op = 'mvn '
+    else:
+      rv = val
+      op = 'mov '
+    res = '\t' + op + rd + ', #' + `rv` + '\n'
+  else:
+    bottom = val & 0xffff
+    top = val >> 16
+    res = '\tmov ' + rd + ', #', `bottom` + '\n'
+    res = '\tmovt ' + rd + ', #', `top` + '\n'
+  return res + regalloc.genSpillStoreIfNecessary(self.dest)
+    
+LoadImmStat.codegen = loadimm_codegen
+
+
 def generateCode(program, regalloc): 
   return program.codegen(regalloc)
   

@@ -665,7 +665,7 @@ class LoadStat(Stat):  # ll
       return `self.dest` + ' <- ' + `self.symbol`
     
     
-class LoadImmStat(Stat):
+class LoadImmStat(Stat):  # ll
   def __init__(self, parent=None, dest=None, val=0, symtab=None):
     self.parent=parent
     self.val = val
