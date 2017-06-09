@@ -45,9 +45,31 @@ def block_codegen(self, regalloc):
     res += self.body.codegen(regalloc)
   except Exception:
     pass
+  try:
+    res += self.defs.codegen(regalloc)
+  except Exception:
+    pass
   return res
   
 Block.codegen = block_codegen
+
+
+def deflist_codegen(self, regalloc):
+  return ''.join([child.codegen(regalloc) for child in self.children])
+  
+DefinitionList.codegen = deflist_codegen
+
+
+def fun_codegen(self, regalloc):
+  res = '\n' + self.symbol.name + ':\n'
+  res += '\tstmdb ' + getRegisterString(REG_SP) + '!, {' + getRegisterString(REG_LR) + '}\n'
+  # TODO: emit full prologue
+  res += self.body.codegen(regalloc)
+  # TODO: emit full epilogue
+  res += '\tldmia ' + getRegisterString(REG_SP) + '!, {' + getRegisterString(REG_PC) + '}\n'
+  return res
+  
+FunctionDef.codegen = fun_codegen
 
 
 def binstat_codegen(self, regalloc):
@@ -65,6 +87,12 @@ def binstat_codegen(self, regalloc):
     res += '\tmul ' + param + '\n'
   elif self.op == "slash":
     res += '\tdiv ' + param + '\n'
+  # elif self.op == "eql":
+#   elif self.op == "neq":
+#   elif self.op == "lss":
+#   elif self.op == "leq":
+#   elif self.op == "gtr":
+#   elif self.op == "geq":
   else:
     raise Exception, "operation " + `self.op` + " unexpected"
   return res + regalloc.genSpillStoreIfNecessary(self.dest)
