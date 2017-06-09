@@ -142,6 +142,24 @@ def emptystat_codegen(self, regalloc):
 EmptyStat.codegen = emptystat_codegen
 
 
+def ldptrto_codegen(self, regalloc):
+  rd = regalloc.getRegisterForVariable(self.dest)
+  res = ''
+  ai = self.symbol.allocinfo
+  if type(ai) is LocalSymbolLayout:
+    off = ai.fpreloff
+    if off > 0:
+      res = '\tadd ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + `off` + '\n'
+    else:
+      res = '\tsub ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + `-off` + '\n'
+  else:
+    res = '\teor ' + rd + ', ' + rd + ', ' + rd + '\n'
+    res += '\tadr ' + rd + ', ' + ai.symname + '\n'
+  return res + regalloc.genSpillStoreIfNecessary(self.dest)
+  
+LoadPtrToSym.codegen = ldptrto_codegen
+
+
 def storestat_codegen(self, regalloc):
   res = ''
   if self.dest.alloct == 'reg':
@@ -163,6 +181,30 @@ def storestat_codegen(self, regalloc):
   return '\tstm' + typeid + ' ' + rsrc + ', ' + dest + '\n'
   
 StoreStat.codegen = storestat_codegen
+
+
+def loadstat_codegen(self, regalloc):
+  res = ''
+  if self.symbol.alloct == 'reg':
+    res += regalloc.genSpillLoadIfNecessary(self.symbol)
+    src = '[' + regalloc.getRegisterForVariable(self.symbol) + ']'
+  else:
+    ai = self.symbol.allocinfo
+    if type(ai) is LocalSymbolLayout:
+      src = '[' + getRegisterString(REG_FP) + '], #' + ai.symname
+    else:
+      src = ai.symname
+      
+  typeid = ['b', 'h', None, ''][self.symbol.stype.size / 8 - 1]
+  if typeid != '' and 'unsigned' in self.symbol.stype.qualifiers:
+    typeid = 's' + type
+  
+  rdst = regalloc.getRegisterForVariable(self.dest)
+  res += '\tldm' + typeid + ' ' + rdst + ', ' + src + '\n'
+  res += regalloc.genSpillStoreIfNecessary(self.dest)
+  return res
+  
+LoadStat.codegen = loadstat_codegen
 
 
 def generateCode(program, regalloc): 
