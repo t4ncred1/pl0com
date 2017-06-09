@@ -103,21 +103,43 @@ def branch_codegen(self, regalloc):
       res += '\tbl ' + targetl + '\n'
       res += '1:'
       return res
-  return '; impossible!\n'
+  return '\t; impossible!\n'
   
 BranchStat.codegen = branch_codegen
+
+
+def emptystat_codegen(self, regalloc):
+  return '\t; emptystat\n'
+  
+EmptyStat.codegen = emptystat_codegen
+
+
+def storestat_codegen(self, regalloc):
+  res = ''
+  if self.dest.alloct == 'reg':
+    res += regalloc.genSpillLoadIfNecessary(self.dest)
+    dest = '[' + regalloc.getRegisterForVariable(self.dest) + ']'
+  else:
+    ai = self.dest.allocinfo
+    if type(ai) is LocalSymbolLayout:
+      dest = '[' + getRegisterString(REG_FP) + '], #' + `ai.fpreloff`
+    else:
+      dest = ai.symname
+      
+  typeid = ['b', 'h', None, ''][self.dest.stype.size / 8 - 1]
+  if typeid != '' and 'unsigned' in self.dest.stype.qualifiers:
+    typeid = 's' + type
+  
+  res += regalloc.genSpillLoadIfNecessary(self.symbol)
+  rsrc = regalloc.getRegisterForVariable(self.symbol)
+  return '\tstm' + typeid + ' ' + rsrc + ', ' + dest + '\n'
+  
+StoreStat.codegen = storestat_codegen
 
 
 def generateCode(program, regalloc): 
   return program.codegen(regalloc)
   
-
-
-
-
-
-
-
 
 
 
