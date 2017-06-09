@@ -43,7 +43,7 @@ def token(word):
     if word in symbols[s] :
       return s
   try : # If a terminal is not one of the standard tokens but can be converted to float, then it is a number, otherwise, an identifier
-    float(word)
+    int(word)
     return 'number'
   except ValueError, e :
     return 'ident'

@@ -75,7 +75,7 @@ def factor(symtab) :
       return ArrayElement(var=var, offset=offset, symtab=symtab)
     else:
       return Var(var=var, symtab=symtab)
-  if accept('number') : return Const(value=value, symtab=symtab)
+  if accept('number') : return Const(value=int(value), symtab=symtab)
   elif accept('lparen') :
     expr = expression()
     expect('rparen')
@@ -202,13 +202,13 @@ def constdef(local_vars, alloct='auto'):
   name=value
   expect('eql')
   expect('number')
-  local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), value)
+  local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), int(value))
   while accept('comma') :
     expect('ident')
     name=value
     expect('eql')
     expect('number')
-    local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), value)
+    local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), int(value))
     
   
 @logger
