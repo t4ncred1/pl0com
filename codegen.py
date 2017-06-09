@@ -150,7 +150,7 @@ def storestat_codegen(self, regalloc):
   else:
     ai = self.dest.allocinfo
     if type(ai) is LocalSymbolLayout:
-      dest = '[' + getRegisterString(REG_FP) + '], #' + `ai.fpreloff`
+      dest = '[' + getRegisterString(REG_FP) + '], #' + ai.symname
     else:
       dest = ai.symname
       

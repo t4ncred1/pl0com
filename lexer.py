@@ -70,6 +70,7 @@ var multid[5] [5] : short;
 PROCEDURE square;
 VAR test;
 BEGIN
+   test := 1234;
    squ := x * x
 END;
  
