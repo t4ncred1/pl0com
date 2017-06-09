@@ -56,7 +56,7 @@ def binstat_codegen(self, regalloc):
   ra = regalloc.getRegisterForVariable(self.srca)
   rb = regalloc.getRegisterForVariable(self.srcb)
   rd = regalloc.getRegisterForVariable(self.dest)
-  param = ra + ', ' + rb + ', ' + rd
+  param = rd + ', ' + ra + ', ' + rb
   if self.op == "plus":
     res += '\tadd ' + param + '\n'
   elif self.op == "minus":
