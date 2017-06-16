@@ -14,7 +14,11 @@ REGS_CALLERSAVE = [0, 1, 2, 3]
 
 
 def getRegisterString(regid):
-  return '%r'+`regid`
+  if regid == REG_LR:
+    return 'lr'
+  if regid == REG_SP:
+    return 'sp'
+  return 'r'+`regid`
   
   
 def saveRegs(reglist):
