@@ -141,12 +141,17 @@ def branch_codegen(self, regalloc):
       return res + '\tcbnz ' + rcond + ', ' + targetl + '\n'
   else:
     if self.cond is None:
-      return '\tbl ' + targetl + '\n'
+      res = saveRegs(REGS_CALLERSAVE)
+      res += '\tbl ' + targetl + '\n'
+      res += restoreRegs(REGS_CALLERSAVE)
+      return res
     else:
       res = regalloc.genSpillLoadIfNecessary(self.cond)
       rcond = regalloc.getRegisterForVariable(self.cond)
       res += '\tcbz ' + rcond + ', 1f\n'
+      res += saveRegs(REGS_CALLERSAVE)
       res += '\tbl ' + targetl + '\n'
+      res += restoreRegs(REGS_CALLERSAVE)
       res += '1:'
       return res
   return '\t; impossible!\n'
