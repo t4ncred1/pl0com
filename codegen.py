@@ -246,6 +246,26 @@ def loadimm_codegen(self, regalloc):
 LoadImmStat.codegen = loadimm_codegen
 
 
+def unarystat_codegen(self, regalloc):
+  res = regalloc.genSpillLoadIfNecessary(self.src)
+  rs = regalloc.getRegisterForVariable(self.src)
+  rd = regalloc.getRegisterForVariable(self.dest)
+  if self.op == 'plus':
+    if rs != rd:
+      res += '\tmov ' + rd + ', ' + rs + '\n'
+  elif self.op == 'minus':
+    res += '\tmvn ' + rd + ', ' + rs + '\n'
+    res += '\tadd ' + rd + ', ' + rd + ', #1\n'
+  elif self.op == 'odd':
+    res += '\tand ' + rd + ', ' + rs + ', #1\n'
+  else:
+    raise Exception, "operation " + `self.op` + " unexpected"
+  res += regalloc.genSpillStoreIfNecessary(self.dest)
+  return res
+  
+UnaryStat.codegen = unarystat_codegen
+
+
 def generateCode(program, regalloc): 
   return program.codegen(regalloc)
   

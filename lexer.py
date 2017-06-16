@@ -75,6 +75,8 @@ BEGIN
 END;
  
 BEGIN
+   x := -1;
+
    x := 1;
    WHILE x <= 10 DO
    BEGIN
