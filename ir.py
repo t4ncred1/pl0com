@@ -801,6 +801,7 @@ class Block(Stat):
     self.defs=defs
     self.body.parent=self
     self.defs.parent=self
+    self.stackroom = 0
 
   
 

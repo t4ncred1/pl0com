@@ -39,12 +39,24 @@ def block_codegen(self, regalloc):
   res = "; block\n"
   for sym in self.local_symtab:
     res += sym.codegen(regalloc)
+    
   if self.parent is None:
     res += "_start:\n"
+    
+  res += saveRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
+  res += '\tmov ' + getRegisterString(REG_FP) + ', ' + getRegisterString(REG_SP) + '\n'
+  stacksp = self.stackroom + regalloc.spillRoom()
+  res += '\tsub ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_SP) + ', #' + `stacksp` + '\n'
+    
   try:
     res += self.body.codegen(regalloc)
   except Exception:
     pass
+    
+  res += '\tmov ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_FP) + '\n'
+  res += restoreRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
+  res += '\tbx lr\n'
+    
   try:
     res += self.defs.codegen(regalloc)
   except Exception:
@@ -62,11 +74,7 @@ DefinitionList.codegen = deflist_codegen
 
 def fun_codegen(self, regalloc):
   res = '\n' + self.symbol.name + ':\n'
-  res += '\tstmdb ' + getRegisterString(REG_SP) + '!, {' + getRegisterString(REG_LR) + '}\n'
-  # TODO: emit full prologue
   res += self.body.codegen(regalloc)
-  # TODO: emit full epilogue
-  res += '\tldmia ' + getRegisterString(REG_SP) + '!, {' + getRegisterString(REG_PC) + '}\n'
   return res
   
 FunctionDef.codegen = fun_codegen

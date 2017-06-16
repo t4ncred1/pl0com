@@ -44,6 +44,7 @@ def performDataLayoutOfFunction(funcroot):
     bsize = var.stype.size / 8
     offs -= bsize
     var.setAllocInfo(LocalSymbolLayout(prefix + var.name, offs, bsize))
+  funcroot.body.stackroom = -offs
 
 
 def performDataLayoutOfProgram(root):

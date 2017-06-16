@@ -56,6 +56,9 @@ class RegisterAllocation(object):
       if b is None:
         b = set()
       self.spillsets[reg] = a | b
+      
+  def spillRoom(self):
+    return len(self.spillsets) * 4;
     
   def __repr__(self):
     return 'vartoreg = ' + `self.vartoreg` + '\nspillsets = ' + `self.spillsets`
