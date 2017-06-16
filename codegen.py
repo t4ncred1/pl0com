@@ -78,21 +78,39 @@ def binstat_codegen(self, regalloc):
   ra = regalloc.getRegisterForVariable(self.srca)
   rb = regalloc.getRegisterForVariable(self.srcb)
   rd = regalloc.getRegisterForVariable(self.dest)
-  param = rd + ', ' + ra + ', ' + rb
+  param = ra + ', ' + rb
   if self.op == "plus":
-    res += '\tadd ' + param + '\n'
+    res += '\tadd ' + rd + ', ' + param + '\n'
   elif self.op == "minus":
-    res += '\tsub ' + param + '\n'
+    res += '\tsub ' + rd + ', ' + param + '\n'
   elif self.op == "times":
-    res += '\tmul ' + param + '\n'
+    res += '\tmul ' + rd + ', ' + param + '\n'
   elif self.op == "slash":
-    res += '\tdiv ' + param + '\n'
-  # elif self.op == "eql":
-#   elif self.op == "neq":
-#   elif self.op == "lss":
-#   elif self.op == "leq":
-#   elif self.op == "gtr":
-#   elif self.op == "geq":
+    res += '\tdiv ' + rd + ', ' + param + '\n'
+  elif self.op == "eql":
+    res += '\tcmp ' + param + '\n'
+    res += '\tmoveq ' + rd + ', #1\n'
+    res += '\tmovne ' + rd + ', #0\n'
+  elif self.op == "neq":
+    res += '\tcmp ' + param + '\n'
+    res += '\tmoveq ' + rd + ', #0\n'
+    res += '\tmovne ' + rd + ', #1\n'
+  elif self.op == "lss":
+    res += '\tcmp ' + param + '\n'
+    res += '\tmovlt ' + rd + ', #1\n'
+    res += '\tmovge ' + rd + ', #0\n'
+  elif self.op == "leq":
+    res += '\tcmp ' + param + '\n'
+    res += '\tmovle ' + rd + ', #1\n'
+    res += '\tmovgt ' + rd + ', #0\n'
+  elif self.op == "gtr":
+    res += '\tcmp ' + param + '\n'
+    res += '\tmovgt ' + rd + ', #1\n'
+    res += '\tmovle ' + rd + ', #0\n'
+  elif self.op == "geq":
+    res += '\tcmp ' + param + '\n'
+    res += '\tmovge ' + rd + ', #1\n'
+    res += '\tmovlt ' + rd + ', #0\n'
   else:
     raise Exception, "operation " + `self.op` + " unexpected"
   return res + regalloc.genSpillStoreIfNecessary(self.dest)
