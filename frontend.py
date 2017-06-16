@@ -102,7 +102,7 @@ def expression(symtab) :
     getsym()
     op = sym
   expr = term(symtab)
-  if op : expr = UnExpr(children=[initial_op, expr], symtab=symtab)
+  if op : expr = UnExpr(children=[op, expr], symtab=symtab)
   while new_sym in [ 'plus', 'minus' ] :
     getsym()
     op = sym
