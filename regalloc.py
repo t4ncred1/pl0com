@@ -5,6 +5,9 @@ __doc__='''Minimal support for register allocation'''
 from cfg import *
 
 
+SPILL_FLAG = 999
+
+
 class NotEnoughRegsException(Exception):
   pass
 
@@ -14,8 +17,7 @@ class minimal_register_allocator(object):
   def __init__(self,cfg,nregs):
     self.cfg=cfg
     self.nregs=nregs
-    self.allocresult=RegisterAllocation(dict(), dict())
-  
+    self.allocresult=RegisterAllocation(dict(), 0, self.nregs)
 
   def __call__(self):
     blockq = self.cfg.heads().values()
@@ -41,27 +43,35 @@ class minimal_register_allocator(object):
     
 class RegisterAllocation(object):
 
-  def __init__(self, vartoreg, spillsets):
+  def __init__(self, vartoreg, numspill, nregs):
     self.vartoreg = vartoreg
-    self.spillsets = spillsets  # dict reg -> set(vars allocated to the same reg)
+    self.numspill = numspill
+    self.nregs = nregs
+    self.vartospillframeoffset = dict()
+    self.spillregi = 0
+    self.spillframeoffseti = 0
     
   def update(self, otherra):
     self.vartoreg.update(otherra.vartoreg)
-    allregs = set(otherra.spillsets.keys()) | set(otherra.spillsets.keys())
-    for reg in allregs:
-      a = otherra.spillsets.get(reg)
-      b = self.spillsets.get(reg)
-      if a is None:
-        a = set()
-      if b is None:
-        b = set()
-      self.spillsets[reg] = a | b
+    self.numspill += otherra.numspill
       
   def spillRoom(self):
-    return len(self.spillsets) * 4;
+    return self.numspill * 4;
+    
+  # returns if the variable is spilled
+  def materializeSpilledVarIfNecessary(self, var):
+    if self.vartoreg[var] != SPILL_FLAG:
+      if self.vartoreg[var] >= self.nregs - 2:
+        return True;
+      return False;
+    self.vartoreg[var] = self.spillregi + self.nregs - 2
+    self.spillregi = (self.spillregi + 1) % 2
+    self.vartospillframeoffset[var] = self.spillframeoffseti
+    self.spillframeoffseti += 4
+    return True;
     
   def __repr__(self):
-    return 'vartoreg = ' + `self.vartoreg` + '\nspillsets = ' + `self.spillsets`
+    return 'vartoreg = ' + `self.vartoreg`
     
     
     
@@ -120,14 +130,14 @@ class bb_register_allocator(object):
       lasti = vartolasti[var]
       if lasti:
         self.varliveness.insert(0, {"var":var, "interv":lasti})
-          
+                  
     
   def __call__(self):
     self.computeLivenessIntervals()
     
     live = []
-    spillsets = {}
-    freeregs = set(range(0, self.nregs))
+    freeregs = set(range(0, self.nregs-2))  # -2 for spill room
+    numspill = 0
     
     for livei in self.varliveness:
       start = livei["interv"][0]
@@ -143,25 +153,22 @@ class bb_register_allocator(object):
           
       if len(freeregs) == 0:
         tospill = live[-1]
-        reg = self.vartoreg[tospill["var"]]
-        self.vartoreg[livei["var"]] = reg
         # keep the longest interval
-        if tospill["interv"][-1] < livei["interv"][-1]:
-          live.pop(-1)
-          live.append(livei)
-        # add these vars to the spill set for this register so that we can
-        # generate the code correctly
-        spillset = spillsets.get(reg)
-        if spillset is None:
-          spillset = set()
-        spillset |= set([tospill["var"], livei["var"]])
-        spillsets[reg] = spillset
+        if tospill["interv"][-1] > livei["interv"][-1]:
+          # we have to spill "tospill"
+          self.vartoreg[livei["var"]] = self.vartoreg[tospill["var"]]
+          self.vartoreg[tospill["var"]] = SPILL_FLAG
+          live.pop(-1)  # remove spill from active
+          live.append(livei)  # add i to active
+        else:
+          self.vartoreg[livei["var"]] = SPILL_FLAG
+        numspill += 1
         
       else:
         self.vartoreg[livei["var"]] = freeregs.pop()
         live.append(livei)
       
-    return RegisterAllocation(self.vartoreg, spillsets)
+    return RegisterAllocation(self.vartoreg, numspill, self.nregs)
 
       
     

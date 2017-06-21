@@ -284,7 +284,7 @@ if __name__ == '__main__' :
    
   from regalloc import *
   print "\n\nREGALLOC\n\n"
-  ra = minimal_register_allocator(cfg,8)
+  ra = minimal_register_allocator(cfg, 11)
   reg_alloc = ra()
   print reg_alloc
   
