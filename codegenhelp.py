@@ -55,6 +55,7 @@ def enterFunctionBody(self, block):
   
 
 def genSpillLoadIfNecessary(self, var):
+  self.dematerializeSpilledVarIfNecessary(var)
   if not self.materializeSpilledVarIfNecessary(var):
     return ''
   offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
@@ -66,7 +67,8 @@ def genSpillLoadIfNecessary(self, var):
   
 def getRegisterForVariable(self, var):
   self.materializeSpilledVarIfNecessary(var)
-  return getRegisterString(self.vartoreg[var])
+  res = getRegisterString(self.vartoreg[var])
+  return res
 
 
 def genSpillStoreIfNecessary(self, var):
@@ -76,6 +78,7 @@ def genSpillStoreIfNecessary(self, var):
   rd = self.getRegisterForVariable(var)
   res = '\tstm ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
   res += '\t ; <<- spill\n'
+  self.dematerializeSpilledVarIfNecessary(var)
   return res
 
 

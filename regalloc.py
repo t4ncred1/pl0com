@@ -58,6 +58,15 @@ class RegisterAllocation(object):
   def spillRoom(self):
     return self.numspill * 4;
     
+  # resets the register used for a spill variable when we know that instance
+  # of the variable is dead
+  # we want to keep alternating between one and the other spill-reserved
+  # register so that we don't materialize two spilled variables used in the same
+  # instruction to the same register
+  def dematerializeSpilledVarIfNecessary(self, var):
+    if self.vartoreg[var] >= self.nregs - 2:
+      self.vartoreg[var] = SPILL_FLAG
+    
   # returns if the variable is spilled
   def materializeSpilledVarIfNecessary(self, var):
     if self.vartoreg[var] != SPILL_FLAG:
@@ -66,8 +75,9 @@ class RegisterAllocation(object):
       return False;
     self.vartoreg[var] = self.spillregi + self.nregs - 2
     self.spillregi = (self.spillregi + 1) % 2
-    self.vartospillframeoffset[var] = self.spillframeoffseti
-    self.spillframeoffseti += 4
+    if not (var in self.vartospillframeoffset):
+      self.vartospillframeoffset[var] = self.spillframeoffseti
+      self.spillframeoffseti += 4
     return True;
     
   def __repr__(self):
