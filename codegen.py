@@ -210,7 +210,7 @@ def storestat_codegen(self, regalloc):
   
   res += regalloc.genSpillLoadIfNecessary(self.symbol)
   rsrc = regalloc.getRegisterForVariable(self.symbol)
-  return '\tstm' + typeid + ' ' + rsrc + ', ' + dest + '\n'
+  return res + '\tstm' + typeid + ' ' + rsrc + ', ' + dest + '\n'
   
 StoreStat.codegen = storestat_codegen
 
