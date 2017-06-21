@@ -130,10 +130,10 @@ BinStat.codegen = binstat_codegen
 def print_codegen(self, regalloc):
   res = regalloc.genSpillLoadIfNecessary(self.src)
   rp = regalloc.getRegisterForVariable(self.src)
-  res += '\tpush ' + getRegisterString(0) + '\n'
+  res += saveRegs(REGS_CALLERSAVE)
   res += '\tmov ' + getRegisterString(0) + ', ' + rp + '\n'
   res += '\tbl __print\n'
-  res += '\tpop ' + getRegisterString(0) + '\n'
+  res += restoreRegs(REGS_CALLERSAVE)
   return res
   
 PrintCommand.codegen = print_codegen
