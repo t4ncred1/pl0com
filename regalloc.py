@@ -168,6 +168,9 @@ class bb_register_allocator(object):
         self.vartoreg[livei["var"]] = freeregs.pop()
         live.append(livei)
       
+      # sort the active intervals by increasing end point
+      live.sort(key=lambda li: li['interv'][-1])
+      
     return RegisterAllocation(self.vartoreg, numspill, self.nregs)
 
       
