@@ -47,20 +47,39 @@ def restoreRegs(reglist):
 
 # class RegisterAllocation:
 
+
+def enterFunctionBody(self, block):
+  self.curfun = block
+  self.spillvarloc = dict()
+  self.spillvarloctop = -block.stackroom
+  
+
 def genSpillLoadIfNecessary(self, var):
-  # todo
-  return ''
+  if not self.materializeSpilledVarIfNecessary(var):
+    return ''
+  offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
+  rd = self.getRegisterForVariable(var)
+  res = '\tldm ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
+  res += '\t ; <<- fill\n'
+  return res
   
   
 def getRegisterForVariable(self, var):
+  self.materializeSpilledVarIfNecessary(var)
   return getRegisterString(self.vartoreg[var])
 
 
 def genSpillStoreIfNecessary(self, var):
-  # todo
-  return ''
+  if not self.materializeSpilledVarIfNecessary(var):
+    return ''
+  offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
+  rd = self.getRegisterForVariable(var)
+  res = '\tstm ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
+  res += '\t ; <<- spill\n'
+  return res
 
 
+RegisterAllocation.enterFunctionBody = enterFunctionBody
 RegisterAllocation.genSpillLoadIfNecessary = genSpillLoadIfNecessary
 RegisterAllocation.getRegisterForVariable = getRegisterForVariable
 RegisterAllocation.genSpillStoreIfNecessary = genSpillStoreIfNecessary

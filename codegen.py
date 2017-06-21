@@ -48,6 +48,7 @@ def block_codegen(self, regalloc):
   stacksp = self.stackroom + regalloc.spillRoom()
   res += '\tsub ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_SP) + ', #' + `stacksp` + '\n'
     
+  regalloc.enterFunctionBody(self)
   try:
     res += self.body.codegen(regalloc)
   except Exception:
