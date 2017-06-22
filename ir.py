@@ -79,6 +79,14 @@ class FunctionType(Type):
     self.size=0
     self.basetype='Function'
     self.qual_list=[]
+    
+class PointerType(Type):
+  def __init__(self, ptrto):
+    self.name = '&' + ptrto.name
+    self.size = 32
+    self.basetype = 'Int'
+    self.qual_list = ['unsigned']
+    self.pointstotype = ptrto
 
 
 standard_types = {
@@ -288,10 +296,10 @@ class ArrayElement(IRNode):
     off = self.offset.destination()
     
     statl = [self.offset]
-    
-    ptrreg = newTemporary(self.symtab, standard_types['uint'])
+        
+    ptrreg = newTemporary(self.symtab, PointerType(self.symbol.stype.basetype))
     loadptr = LoadPtrToSym(dest=ptrreg, symbol=self.symbol, symtab=self.symtab)
-    src = newTemporary(self.symtab, standard_types['uint'])
+    src = newTemporary(self.symtab, PointerType(self.symbol.stype.basetype))
     add = BinStat(dest=src, op='plus', srca=ptrreg, srcb=off, symtab=self.symtab)
     statl += [loadptr, add]
     
@@ -494,13 +502,16 @@ class AssignStat(Stat):
     src = self.expr.destination()
     dst = self.symbol
     
-    stats = [self.expr]
+    stats = [self.expr] 
     
     if self.offset:
       off = self.offset.destination()
-      ptrreg = newTemporary(self.symtab, standard_types['uint'])
+      desttype = dst.stype
+      if type(desttype) is ArrayType:
+        desttype = desttype.basetype
+      ptrreg = newTemporary(self.symtab, PointerType(desttype))
       loadptr = LoadPtrToSym(dest=ptrreg, symbol=dst, symtab=self.symtab)
-      dst = newTemporary(self.symtab, standard_types['uint'])
+      dst = newTemporary(self.symtab, PointerType(desttype))
       add = BinStat(dest=dst, op='plus', srca=ptrreg, srcb=off, symtab=self.symtab)
       stats += [self.offset, loadptr, add]
       
@@ -611,6 +622,9 @@ class StoreStat(Stat):  # ll
     if self.symbol.alloct != 'reg':
       raise RuntimeError('store not from register')
     self.symtab=symtab
+    # if self.dest is a register, the register contains the destination
+    # address; if self.dest is a memory symbol, the store is done to the memory
+    # location that will be allocated to that symbol
     self.dest = dest
     self.killhint = killhint
     

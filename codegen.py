@@ -204,8 +204,12 @@ def storestat_codegen(self, regalloc):
     else:
       dest = ai.symname
       
-  typeid = ['b', 'h', None, ''][self.dest.stype.size / 8 - 1]
-  if typeid != '' and 'unsigned' in self.dest.stype.qualifiers:
+  if type(self.dest.stype) is PointerType:
+    desttype = self.dest.stype.pointstotype
+  else:
+    desttype = self.dest.stype
+  typeid = ['b', 'h', None, ''][desttype.size / 8 - 1]
+  if typeid != '' and 'unsigned' in desttype.qual_list:
     typeid = 's' + type
   
   res += regalloc.genSpillLoadIfNecessary(self.symbol)
@@ -227,8 +231,12 @@ def loadstat_codegen(self, regalloc):
     else:
       src = ai.symname
       
-  typeid = ['b', 'h', None, ''][self.symbol.stype.size / 8 - 1]
-  if typeid != '' and 'unsigned' in self.symbol.stype.qualifiers:
+  if type(self.symbol.stype) is PointerType:
+    desttype = self.symbol.stype.pointstotype
+  else:
+    desttype = self.symbol.stype
+  typeid = ['b', 'h', None, ''][desttype.size / 8 - 1]
+  if typeid != '' and 'unsigned' in desttype.qual_list:
     typeid = 's' + type
   
   rdst = regalloc.getRegisterForVariable(self.dest)
