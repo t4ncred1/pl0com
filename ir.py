@@ -35,7 +35,7 @@ def newTemporary(symtab, type):
 # TYPES
 
 class Type(object):
-  def __init__(self, name, size, basetype, qualifiers=None):
+  def __init__(self, name, size, basetype, qualifiers=[]):
     self.name=name
     self.size=size
     self.basetype=basetype
