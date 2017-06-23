@@ -44,6 +44,19 @@ def expect(s) :
   return 0
   
   
+def arrayOffset(symtab):
+  target=symtab.find(value)
+  offset=None
+  if isinstance(target.stype, ArrayType):
+    idxes = []
+    for i in range(0, len(target.stype.dims)):
+      expect('lspar')
+      idxes.append(expression(symtab))
+      expect('rspar')
+    offset = linearizeMultidVector(idxes, target, symtab)
+  return offset
+  
+  
 def linearizeMultidVector(explist, target, symtab):
   offset=None
   for i in range(0, len(target.stype.dims)):
@@ -65,17 +78,13 @@ def linearizeMultidVector(explist, target, symtab):
 def factor(symtab) :
   if accept('ident') :
     var = symtab.find(value)
-    if (isinstance(var.stype, ArrayType)):
-      vidx = []
-      for i in var.stype.dims:
-        expect('lspar')
-        vidx.append(expression(symtab))
-        expect('rspar')
-      offset = linearizeMultidVector(vidx, var, symtab)
-      return ArrayElement(var=var, offset=offset, symtab=symtab)
-    else:
+    offs = arrayOffset(symtab)
+    if offs is None:
       return Var(var=var, symtab=symtab)
-  if accept('number') : return Const(value=int(value), symtab=symtab)
+    else:
+      return ArrayElement(var=var, offset=offs, symtab=symtab)
+  if accept('number') : 
+    return Const(value=int(value), symtab=symtab)
   elif accept('lparen') :
     expr = expression()
     expect('rparen')
@@ -130,14 +139,7 @@ def condition(symtab) :
 def statement(symtab) :
   if accept('ident') :
     target=symtab.find(value)
-    offset=None
-    if isinstance(target.stype, ArrayType):
-      idxes = []
-      for i in range(0, len(target.stype.dims)):
-        expect('lspar')
-        idxes.append(expression(symtab))
-        expect('rspar')
-      offset = linearizeMultidVector(idxes, target, symtab)
+    offset=arrayOffset(symtab)
     expect('becomes')
     expr=expression(symtab)
     return AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
