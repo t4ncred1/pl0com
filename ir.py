@@ -447,7 +447,7 @@ class WhileStat(Stat):
     exit_stat = EmptyStat(self.parent,symtab=self.symtab)
     exit_stat.setLabel(exit_label)
     self.cond.setLabel(entry_label)
-    branch = BranchStat(None,self.cond.destination(),exit_label,self.symtab)
+    branch = BranchStat(None,self.cond.destination(),exit_label,self.symtab, negcond=True)
     loop = BranchStat(None,None,entry_label,self.symtab)
     stat_list = StatList(self.parent, [self.cond, branch,self.body,loop,exit_stat], self.symtab)
     return self.parent.replace(self,stat_list)
@@ -552,9 +552,10 @@ class PrintCommand(Stat):   # ll
 
 
 class BranchStat(Stat):   # ll
-  def __init__(self, parent=None, cond=None, target=None, symtab=None, returns=False):
+  def __init__(self, parent=None, cond=None, target=None, symtab=None, returns=False, negcond=False):
     self.parent=parent
     self.cond=cond # cond == None -> True
+    self.negcond=negcond # if True and Cond != None, the branch is taken when cond is false
     if not (self.cond is None) and self.cond.alloct != 'reg':
       raise RuntimeError('condition not in register')
     self.target=target
@@ -577,7 +578,7 @@ class BranchStat(Stat):   # ll
     else:
       h = 'branch '
     if not (self.cond is None):
-      c = 'on ' + `self.cond`
+      c = 'on ' + ('not ' if self.negcond else '') + `self.cond`
     else:
       c = ''
     return h + c + ' to ' + `self.target`

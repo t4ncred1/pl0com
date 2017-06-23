@@ -168,7 +168,7 @@ def branch_codegen(self, regalloc):
       res = regalloc.genSpillLoadIfNecessary(self.cond)
       rcond = regalloc.getRegisterForVariable(self.cond)
       res += '\ttst ' + rcond + ', ' + rcond + '\n'
-      return res + '\tbne ' + targetl + '\n'
+      return res + '\t' + ('beq' if self.negcond else 'bne') + ' ' + targetl + '\n'
   else:
     if self.cond is None:
       res = saveRegs(REGS_CALLERSAVE)
@@ -178,7 +178,8 @@ def branch_codegen(self, regalloc):
     else:
       res = regalloc.genSpillLoadIfNecessary(self.cond)
       rcond = regalloc.getRegisterForVariable(self.cond)
-      res += '\tcbz ' + rcond + ', 1f\n'
+      res += '\ttst ' + rcond + ', ' + rcond + '\n'
+      res += '\t' + ('bne' if self.negcond else 'beq') + ' ' + rcond + ', 1f\n'
       res += saveRegs(REGS_CALLERSAVE)
       res += '\tbl ' + targetl + '\n'
       res += restoreRegs(REGS_CALLERSAVE)
