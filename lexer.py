@@ -79,6 +79,10 @@ BEGIN
    x := -1;
    
    read x;
+   if x > 100 then begin
+      x := x - 100;
+      print 100
+   end;
    !x;
 
    x := 1;

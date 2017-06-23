@@ -427,8 +427,8 @@ class IfStat(Stat):
       stat_list = StatList(self.parent, [self.cond,branch_to_then,self.elsepart,branch_to_exit,self.thenpart,exit_stat], self.symtab)
       return self.parent.replace(self,stat_list)
     else :
-      branch_to_exit = BranchStat(None,UnExpr(None,['not', self.cond]),exit_label,self.symtab)
-      stat_list = StatList(self.parent, [branch_to_exit,self.thenpart,exit_stat], self.symtab)
+      branch_to_exit = BranchStat(None, self.cond.destination(), exit_label, self.symtab, negcond=True)
+      stat_list = StatList(self.parent, [self.cond, branch_to_exit, self.thenpart, exit_stat], self.symtab)
       return self.parent.replace(self,stat_list)
             
   

@@ -156,7 +156,7 @@ def statement(symtab) :
     statement_list.print_content()
     return statement_list
   elif accept('ifsym') :
-    cond=condition()
+    cond=condition(symtab)
     expect('thensym')
     then=statement(symtab)
     return IfStat(cond=cond,thenpart=then, symtab=symtab)
