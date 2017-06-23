@@ -27,6 +27,7 @@ symbols =  {
   'whilesym'  : ['while'], 
   'becomes'   : [':='], 
   'thensym'   : ['then'], 
+  'elsesym'   : ['else'],
   'dosym'     : ['do'], 
   'constsym'  : ['const'], 
   'comma'     : [','], 
@@ -80,10 +81,10 @@ BEGIN
    
    read x;
    if x > 100 then begin
-      x := x - 100;
-      print 100
+      print -x
+   end else begin
+      print x
    end;
-   !x;
 
    x := 1;
    WHILE x <= 10 DO

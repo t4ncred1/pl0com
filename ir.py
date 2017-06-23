@@ -421,10 +421,10 @@ class IfStat(Stat):
     exit_stat.setLabel(exit_label)
     if self.elsepart :
       then_label = standard_types['label']()
-      self.thenpart.setLabel(else_label)
-      branch_to_then = BranchStat(None,self.cond.destination(),then_label,self.symtab)
-      branch_to_exit = BranchStat(None,None,exit_label,self.symtab)
-      stat_list = StatList(self.parent, [self.cond,branch_to_then,self.elsepart,branch_to_exit,self.thenpart,exit_stat], self.symtab)
+      self.thenpart.setLabel(then_label)
+      branch_to_then = BranchStat(None, self.cond.destination(), then_label, self.symtab)
+      branch_to_exit = BranchStat(None, None, exit_label, self.symtab)
+      stat_list = StatList(self.parent, [self.cond, branch_to_then, self.elsepart, branch_to_exit, self.thenpart, exit_stat], self.symtab)
       return self.parent.replace(self,stat_list)
     else :
       branch_to_exit = BranchStat(None, self.cond.destination(), exit_label, self.symtab, negcond=True)

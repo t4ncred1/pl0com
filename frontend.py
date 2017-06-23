@@ -159,7 +159,10 @@ def statement(symtab) :
     cond=condition(symtab)
     expect('thensym')
     then=statement(symtab)
-    return IfStat(cond=cond,thenpart=then, symtab=symtab)
+    els = None
+    if accept('elsesym'):
+      els = statement(symtab)
+    return IfStat(cond=cond, thenpart=then, elsepart=els, symtab=symtab)
   elif accept('whilesym') :
     cond=condition(symtab)
     expect('dosym')
