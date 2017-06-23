@@ -56,7 +56,8 @@ def block_codegen(self, regalloc):
     res = codegenAppend(res, sym.codegen(regalloc))
     
   if self.parent is None:
-    res[0] += "_start:\n"
+    res[0] += '\t.global __pl0_start\n'
+    res[0] += "__pl0_start:\n"
     
   res[0] += saveRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
   res[0] += '\tmov ' + getRegisterString(REG_FP) + ', ' + getRegisterString(REG_SP) + '\n'
