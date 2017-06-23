@@ -12,6 +12,12 @@ def newLocalConstLabel():
   lab = '.const' + `localvari`
   localvari += 1
   return lab 
+  
+  
+def newLocalConst(val):
+  lab = newLocalConstLabel()
+  trail = lab + ':\n\t.word ' + val + '\n'
+  return lab, trail
 
 
 def symbol_codegen(self, regalloc):
@@ -200,8 +206,8 @@ def ldptrto_codegen(self, regalloc):
     else:
       res = '\tsub ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + `-off` + '\n'
   else:
-    lab = newLocalConstLabel()
-    trail += lab + ':\n\t.word ' + ai.symname + '\n'
+    lab, tmp = newLocalConst(ai.symname)
+    trail += tmp
     res = '\tldr ' + rd + ', ' + lab + '\n'
   return [res + regalloc.genSpillStoreIfNecessary(self.dest), trail]
   
@@ -210,6 +216,7 @@ LoadPtrToSym.codegen = ldptrto_codegen
 
 def storestat_codegen(self, regalloc):
   res = ''
+  trail = ''
   if self.dest.alloct == 'reg':
     res += regalloc.genSpillLoadIfNecessary(self.dest)
     dest = '[' + regalloc.getRegisterForVariable(self.dest) + ']'
@@ -218,7 +225,10 @@ def storestat_codegen(self, regalloc):
     if type(ai) is LocalSymbolLayout:
       dest = '[' + getRegisterString(REG_FP) + ', #' + ai.symname + ']'
     else:
-      dest = ai.symname
+      lab, tmp = newLocalConst(ai.symname)
+      trail += tmp
+      res += '\tldr ' + getRegisterString(REG_SCRATCH) + ', ' + lab + '\n'
+      dest = '[' + getRegisterString(REG_SCRATCH) + ']'
       
   if type(self.dest.stype) is PointerType:
     desttype = self.dest.stype.pointstotype
@@ -230,13 +240,14 @@ def storestat_codegen(self, regalloc):
   
   res += regalloc.genSpillLoadIfNecessary(self.symbol)
   rsrc = regalloc.getRegisterForVariable(self.symbol)
-  return res + '\tstr' + typeid + ' ' + rsrc + ', ' + dest + '\n'
+  return [res + '\tstr' + typeid + ' ' + rsrc + ', ' + dest + '\n', trail]
   
 StoreStat.codegen = storestat_codegen
 
 
 def loadstat_codegen(self, regalloc):
   res = ''
+  trail = ''
   if self.symbol.alloct == 'reg':
     res += regalloc.genSpillLoadIfNecessary(self.symbol)
     src = '[' + regalloc.getRegisterForVariable(self.symbol) + ']'
@@ -245,7 +256,10 @@ def loadstat_codegen(self, regalloc):
     if type(ai) is LocalSymbolLayout:
       src = '[' + getRegisterString(REG_FP) + ', #' + ai.symname + ']'
     else:
-      src = ai.symname
+      lab, tmp = newLocalConst(ai.symname)
+      trail += tmp
+      res += '\tldr ' + getRegisterString(REG_SCRATCH) + ', ' + lab + '\n'
+      src = '[' + getRegisterString(REG_SCRATCH) + ']'
       
   if type(self.symbol.stype) is PointerType:
     desttype = self.symbol.stype.pointstotype
@@ -258,7 +272,7 @@ def loadstat_codegen(self, regalloc):
   rdst = regalloc.getRegisterForVariable(self.dest)
   res += '\tldr' + typeid + ' ' + rdst + ', ' + src + '\n'
   res += regalloc.genSpillStoreIfNecessary(self.dest)
-  return res
+  return [res, trail]
   
 LoadStat.codegen = loadstat_codegen
 
@@ -276,8 +290,7 @@ def loadimm_codegen(self, regalloc):
     res = '\t' + op + rd + ', #' + `rv` + '\n'
     trail = ''
   else:
-    lab = newLocalConstLabel()
-    trail = lab + ':\n\t.word ' + `val` + '\n'
+    lab, trail = newLocalConst(`val`)
     res = '\tldr ' + rd + ', ' + lab + '\n'
   return [res + regalloc.genSpillStoreIfNecessary(self.dest), trail]
     

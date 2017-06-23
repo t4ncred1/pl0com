@@ -5,6 +5,7 @@ from datalayout import *
 
 
 REG_FP = 11
+REG_SCRATCH = 12
 REG_SP = 13
 REG_LR = 14
 REG_PC = 15
