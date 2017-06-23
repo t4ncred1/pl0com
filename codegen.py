@@ -9,7 +9,7 @@ def symbol_codegen(self, regalloc):
   if self.allocinfo is None:
     return ""
   if not isinstance(self.allocinfo, LocalSymbolLayout):
-    return self.allocinfo.symname + ':\t.space ' + `self.allocinfo.bsize` + "\n"
+    return '\t.comm '+ self.allocinfo.symname + ', ' + `self.allocinfo.bsize` + "\n"
   else:
     return self.allocinfo.symname + ':\t.equ ' + `self.allocinfo.fpreloff` + "\n"
 
@@ -17,7 +17,7 @@ Symbol.codegen = symbol_codegen
 
 
 def irnode_codegen(self, regalloc):
-  res = "\t; irnode " + `id(self)` + ' type ' + `type(self)` + "\n"
+  res = '\t' + comment("irnode " + `id(self)` + ' type ' + `type(self)`)
   if 'children' in dir(self) and len(self.children):
     for node in self.children:
       try: 
@@ -28,15 +28,15 @@ def irnode_codegen(self, regalloc):
           pass
         res += node.codegen(regalloc)
       except Exception as e: 
-        res += "\t; node " + `id(node)` + " did not generate any code\n"
-        res += "\t; exc: " + `e` + "\n"
+        res += "\t" + comment("node " + `id(node)` + " did not generate any code")
+        res += "\t" + comment("exc: " + `e`)
   return res
   
 IRNode.codegen = irnode_codegen
 
 
 def block_codegen(self, regalloc):
-  res = "; block\n"
+  res = comment('block')
   for sym in self.local_symtab:
     res += sym.codegen(regalloc)
     
@@ -147,7 +147,8 @@ def branch_codegen(self, regalloc):
     else:
       res = regalloc.genSpillLoadIfNecessary(self.cond)
       rcond = regalloc.getRegisterForVariable(self.cond)
-      return res + '\tcbnz ' + rcond + ', ' + targetl + '\n'
+      res += '\ttst ' + rcond + ', ' + rcond + '\n'
+      return res + '\tbne ' + targetl + '\n'
   else:
     if self.cond is None:
       res = saveRegs(REGS_CALLERSAVE)
@@ -163,13 +164,13 @@ def branch_codegen(self, regalloc):
       res += restoreRegs(REGS_CALLERSAVE)
       res += '1:'
       return res
-  return '\t; impossible!\n'
+  return comment('impossible!')
   
 BranchStat.codegen = branch_codegen
 
 
 def emptystat_codegen(self, regalloc):
-  return '\t; emptystat\n'
+  return '\t' + comment('emptystat')
   
 EmptyStat.codegen = emptystat_codegen
 
@@ -214,7 +215,7 @@ def storestat_codegen(self, regalloc):
   
   res += regalloc.genSpillLoadIfNecessary(self.symbol)
   rsrc = regalloc.getRegisterForVariable(self.symbol)
-  return res + '\tstm' + typeid + ' ' + rsrc + ', ' + dest + '\n'
+  return res + '\tstr' + typeid + ' ' + rsrc + ', ' + dest + '\n'
   
 StoreStat.codegen = storestat_codegen
 
@@ -240,7 +241,7 @@ def loadstat_codegen(self, regalloc):
     typeid = 's' + type
   
   rdst = regalloc.getRegisterForVariable(self.dest)
-  res += '\tldm' + typeid + ' ' + rdst + ', ' + src + '\n'
+  res += '\tldr' + typeid + ' ' + rdst + ', ' + src + '\n'
   res += regalloc.genSpillStoreIfNecessary(self.dest)
   return res
   
@@ -288,8 +289,11 @@ def unarystat_codegen(self, regalloc):
 UnaryStat.codegen = unarystat_codegen
 
 
-def generateCode(program, regalloc): 
-  return program.codegen(regalloc)
+def generateCode(program, regalloc):
+  res = '\t.text\n'
+  res += '\t.arch armv5t\n'
+  res += '\t.syntax unified\n'
+  return res + program.codegen(regalloc)
   
 
 

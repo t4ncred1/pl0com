@@ -43,6 +43,10 @@ def restoreRegs(reglist):
     res += getRegisterString(reglist[i])
   res += '}\n'
   return res
+
+
+def comment(cont):
+  return '@ ' + cont + '\n'
   
 
 # class RegisterAllocation:
@@ -60,8 +64,8 @@ def genSpillLoadIfNecessary(self, var):
     return ''
   offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
   rd = self.getRegisterForVariable(var)
-  res = '\tldm ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
-  res += '\t ; <<- fill\n'
+  res = '\tldr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
+  res += '\t' + comment('<<- fill')
   return res
   
   
@@ -76,8 +80,8 @@ def genSpillStoreIfNecessary(self, var):
     return ''
   offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
   rd = self.getRegisterForVariable(var)
-  res = '\tstm ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
-  res += '\t ; <<- spill\n'
+  res = '\tstr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
+  res += '\t' + comment('<<- spill')
   self.dematerializeSpilledVarIfNecessary(var)
   return res
 
