@@ -5,6 +5,15 @@ from datalayout import *
 from ir import *
 
 
+localvari = 0
+
+def newLocalConstLabel():
+  global localvari
+  lab = '.const' + `localvari`
+  localvari += 1
+  return lab 
+
+
 def symbol_codegen(self, regalloc):
   if self.allocinfo is None:
     return ""
@@ -17,52 +26,56 @@ Symbol.codegen = symbol_codegen
 
 
 def irnode_codegen(self, regalloc):
-  res = '\t' + comment("irnode " + `id(self)` + ' type ' + `type(self)`)
+  res = ['\t' + comment("irnode " + `id(self)` + ' type ' + `type(self)`), '']
   if 'children' in dir(self) and len(self.children):
     for node in self.children:
       try: 
         try:
           labl = node.getLabel()
-          res += labl.name + ':\n'
+          res[0] += labl.name + ':\n'
         except Exception:
           pass
-        res += node.codegen(regalloc)
+        res = codegenAppend(res, node.codegen(regalloc))
       except Exception as e: 
-        res += "\t" + comment("node " + `id(node)` + " did not generate any code")
-        res += "\t" + comment("exc: " + `e`)
+        res[0] += "\t" + comment("node " + `id(node)` + " did not generate any code")
+        res[0] += "\t" + comment("exc: " + `e`)
   return res
   
 IRNode.codegen = irnode_codegen
 
 
 def block_codegen(self, regalloc):
-  res = comment('block')
+  res = [comment('block'), '']
   for sym in self.local_symtab:
-    res += sym.codegen(regalloc)
+    res = codegenAppend(res, sym.codegen(regalloc))
     
   if self.parent is None:
-    res += "_start:\n"
+    res[0] += "_start:\n"
     
-  res += saveRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
-  res += '\tmov ' + getRegisterString(REG_FP) + ', ' + getRegisterString(REG_SP) + '\n'
+  res[0] += saveRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
+  res[0] += '\tmov ' + getRegisterString(REG_FP) + ', ' + getRegisterString(REG_SP) + '\n'
   stacksp = self.stackroom + regalloc.spillRoom()
-  res += '\tsub ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_SP) + ', #' + `stacksp` + '\n'
-    
+  res[0] += '\tsub ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_SP) + ', #' + `stacksp` + '\n'
+  
   regalloc.enterFunctionBody(self)
   try:
-    res += self.body.codegen(regalloc)
+    res = codegenAppend(res, self.body.codegen(regalloc))
   except Exception:
     pass
     
-  res += '\tmov ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_FP) + '\n'
-  res += restoreRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
-  res += '\tbx lr\n'
+  res[0] += '\tmov ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_FP) + '\n'
+  res[0] += restoreRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
+  res[0] += '\tbx lr\n'
+  
+  res[0] = res[0] + res[1]
+  res[1] = ''
     
   try:
-    res += self.defs.codegen(regalloc)
+    res = codegenAppend(res, self.defs.codegen(regalloc))
   except Exception:
     pass
-  return res
+    
+  return res[0] + res[1]
   
 Block.codegen = block_codegen
 
@@ -178,6 +191,7 @@ EmptyStat.codegen = emptystat_codegen
 def ldptrto_codegen(self, regalloc):
   rd = regalloc.getRegisterForVariable(self.dest)
   res = ''
+  trail = ''
   ai = self.symbol.allocinfo
   if type(ai) is LocalSymbolLayout:
     off = ai.fpreloff
@@ -186,9 +200,10 @@ def ldptrto_codegen(self, regalloc):
     else:
       res = '\tsub ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + `-off` + '\n'
   else:
-    res = '\teor ' + rd + ', ' + rd + ', ' + rd + '\n'
-    res += '\tadr ' + rd + ', ' + ai.symname + '\n'
-  return res + regalloc.genSpillStoreIfNecessary(self.dest)
+    lab = newLocalConstLabel()
+    trail += lab + ':\n\t.word ' + ai.symname + '\n'
+    res = '\tldr ' + rd + ', ' + lab + '\n'
+  return [res + regalloc.genSpillStoreIfNecessary(self.dest), trail]
   
 LoadPtrToSym.codegen = ldptrto_codegen
 
@@ -251,7 +266,7 @@ LoadStat.codegen = loadstat_codegen
 def loadimm_codegen(self, regalloc):
   rd = regalloc.getRegisterForVariable(self.dest)
   val = self.val
-  if val >= -4096 and val < 4096:
+  if val >= -256 and val < 256:
     if val < 0:
       rv = -val - 1
       op = 'mvn '
@@ -259,12 +274,12 @@ def loadimm_codegen(self, regalloc):
       rv = val
       op = 'mov '
     res = '\t' + op + rd + ', #' + `rv` + '\n'
+    trail = ''
   else:
-    bottom = val & 0xffff
-    top = val >> 16
-    res = '\tmov ' + rd + ', #', `bottom` + '\n'
-    res = '\tmovt ' + rd + ', #', `top` + '\n'
-  return res + regalloc.genSpillStoreIfNecessary(self.dest)
+    lab = newLocalConstLabel()
+    trail = lab + ':\n\t.word ' + `val` + '\n'
+    res = '\tldr ' + rd + ', ' + lab + '\n'
+  return [res + regalloc.genSpillStoreIfNecessary(self.dest), trail]
     
 LoadImmStat.codegen = loadimm_codegen
 

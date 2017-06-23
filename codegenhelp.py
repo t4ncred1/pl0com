@@ -48,6 +48,14 @@ def restoreRegs(reglist):
 def comment(cont):
   return '@ ' + cont + '\n'
   
+  
+# codegen functions can return an array if they need to add extra stuff at
+# the end of all the code (for example, constants)
+def codegenAppend(vec, code):
+  if type(code) is list:
+    return [vec[0] + code[0], vec[1] + code[1]]
+  return [vec[0] + code, vec[1]]
+  
 
 # class RegisterAllocation:
 
