@@ -11,7 +11,7 @@ def symbol_codegen(self, regalloc):
   if not isinstance(self.allocinfo, LocalSymbolLayout):
     return '\t.comm '+ self.allocinfo.symname + ', ' + `self.allocinfo.bsize` + "\n"
   else:
-    return self.allocinfo.symname + ':\t.equ ' + `self.allocinfo.fpreloff` + "\n"
+    return '\t.equ ' + self.allocinfo.symname + ', ' + `self.allocinfo.fpreloff` + "\n"
 
 Symbol.codegen = symbol_codegen
 
