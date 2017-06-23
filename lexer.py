@@ -35,6 +35,7 @@ symbols =  {
   'period'    : ['.'], 
   'oddsym'    : ['odd'],
   'print'     : ['!', 'print'],
+  'read'      : ['?', 'read']
 }
 
 def token(word):
@@ -76,6 +77,9 @@ END;
  
 BEGIN
    x := -1;
+   
+   read x;
+   !x;
 
    x := 1;
    WHILE x <= 10 DO

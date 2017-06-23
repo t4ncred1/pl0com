@@ -168,6 +168,11 @@ def statement(symtab) :
   elif accept('print') :
     exp=expression(symtab)
     return PrintStat(exp=exp,symtab=symtab)
+  elif accept('read'):
+    expect('ident')
+    target=symtab.find(value)
+    offset=arrayOffset(symtab)
+    return AssignStat(target=target, offset=offset, expr=ReadStat(symtab=symtab), symtab=symtab)
 
  
 @logger

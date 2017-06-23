@@ -159,6 +159,25 @@ def print_codegen(self, regalloc):
 PrintCommand.codegen = print_codegen
 
 
+def read_codegen(self, regalloc):
+  rd = regalloc.getRegisterForVariable(self.dest)
+  
+  # punch a hole in the saved registers if one of them is the destination
+  # of this "instruction"
+  savedregs = REGS_CALLERSAVE
+  if regalloc.vartoreg[self.dest] in savedregs:
+    savedregs.remove(regalloc.vartoreg[self.dest])
+    
+  res = saveRegs(savedregs)
+  res += '\tbl __read\n'
+  res += '\tmov ' + rd + ', ' + getRegisterString(0) +  '\n'
+  res += restoreRegs(savedregs)
+  res += regalloc.genSpillStoreIfNecessary(self.dest)
+  return res
+  
+ReadCommand.codegen = read_codegen
+
+
 def branch_codegen(self, regalloc):
   targetl = self.target.name
   if not self.returns:

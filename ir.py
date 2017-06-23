@@ -549,6 +549,39 @@ class PrintCommand(Stat):   # ll
 
   def humanRepr(self):
     return 'print ' + `self.src`
+    
+    
+class ReadStat(Stat):
+  def __init__(self, parent=None, symtab=None):  
+    self.parent=parent
+    self.symtab=symtab
+    
+  def lower(self):
+    tmp = newTemporary(self.symtab, standard_types['int'])
+    read = ReadCommand(dest=tmp, symtab=self.symtab)
+    stlist = StatList(children=[read], symtab=self.symtab)
+    return self.parent.replace(self, stlist)
+    
+    
+class ReadCommand(Stat):   # ll
+  def __init__(self, parent=None, dest=None, symtab=None):
+    self.parent=parent
+    self.dest=dest
+    if dest.alloct != 'reg':
+      raise RuntimeError('read not to register')
+    self.symtab = symtab
+    
+  def destination(self):
+    return self.dest
+    
+  def collect_uses(self):
+    return []
+    
+  def collect_kills(self):
+    return [self.dest]
+
+  def humanRepr(self):
+    return 'read ' + `self.dest`
 
 
 class BranchStat(Stat):   # ll
