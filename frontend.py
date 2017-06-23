@@ -290,6 +290,14 @@ if __name__ == '__main__' :
   
   from codegen import *
   print "\n\nCODEGEN\n\n"
-  print generateCode(res, reg_alloc)
+  code = generateCode(res, reg_alloc)
+  print code
   
+  import sys
+  if len(sys.argv) == 2:
+    outf = open(sys.argv[1], 'w')
+    outf.write(code)
+    outf.close()
+
+
   
