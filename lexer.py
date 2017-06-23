@@ -81,14 +81,15 @@ BEGIN
    WHILE x <= 10 DO
    BEGIN
       CALL square;
-      x := x + 1 - 2 * x;
+      x := x + 1;
       !squ
    END;
    
    x := 101;
    while x <= 105 do begin
     arr[x - 100] := x;
-    !arr[x - 100] 
+    !arr[x - 100] ;
+    x := x + 1
    end;
    
    x := 1;
@@ -96,7 +97,9 @@ BEGIN
    while x <= 5 do begin
     while y <= 5 do begin
       multid[x] [y] := arr[x] ;
-      !multid[x] [y]
+      !multid[x] [y] ;
+      x := x + 1;
+      y := y + 1
     end
   end
 END.'''
