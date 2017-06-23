@@ -319,7 +319,7 @@ UnaryStat.codegen = unarystat_codegen
 
 def generateCode(program, regalloc):
   res = '\t.text\n'
-  res += '\t.arch armv5t\n'
+  res += '\t.arch armv6\n'
   res += '\t.syntax unified\n'
   return res + program.codegen(regalloc)
   
