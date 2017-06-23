@@ -164,7 +164,7 @@ def read_codegen(self, regalloc):
   
   # punch a hole in the saved registers if one of them is the destination
   # of this "instruction"
-  savedregs = REGS_CALLERSAVE
+  savedregs = list(REGS_CALLERSAVE)
   if regalloc.vartoreg[self.dest] in savedregs:
     savedregs.remove(regalloc.vartoreg[self.dest])
     
