@@ -307,7 +307,7 @@ class ArrayElement(IRNode):
     
   def lower(self):
     global standard_types
-    dest = newTemporary(self.symtab, self.symbol.stype)
+    dest = newTemporary(self.symtab, self.symbol.stype.basetype)
     off = self.offset.destination()
     
     statl = [self.offset]
