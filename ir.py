@@ -36,10 +36,20 @@ def newTemporary(symtab, type):
 
 class Type(object):
   def __init__(self, name, size, basetype, qualifiers=[]):
-    self.name=name
     self.size=size
     self.basetype=basetype
     self.qual_list=qualifiers
+    self.name = name if name else self.defaultName()
+    
+  def defaultName(self):
+    n = ''
+    if 'unsigned' in self.qual_list:
+      n += 'u'
+    n += 'int' # no float types exist at the moment
+    n += `self.size`
+    n += '_t'
+    return n
+
 
 class ArrayType(Type):
   def __init__(self, name, dims, basetype):
@@ -49,8 +59,13 @@ class ArrayType(Type):
     self.size=reduce(lambda a, b: a*b, dims) * basetype.size
     self.basetype=basetype
     self.qual_list=[]
+    self.name=name if name else self.defaultName()
+    
+  def defaultName(self):
+    return self.basetype.name + 'x' + `self.dims`
 
-class StructType(Type):
+
+class StructType(Type):  # currently unused
   def __init__(self, name, size, fields):
     self.name=name
     self.fields=fields
