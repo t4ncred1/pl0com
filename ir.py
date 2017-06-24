@@ -62,7 +62,7 @@ class ArrayType(Type):
     self.name=name if name else self.defaultName()
     
   def defaultName(self):
-    return self.basetype.name + 'x' + `self.dims`
+    return self.basetype.name + `self.dims`
 
 
 class StructType(Type):  # currently unused
