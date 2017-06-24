@@ -345,16 +345,11 @@ class BinExpr(Expr):
     srca = self.children[1].destination();
     srcb = self.children[2].destination();
     
-    # type promotion
-    if srca.stype.basetype == 'Float' or srcb.stype.basetype == 'Float':
-      desttype = Type('', max(srca.stype.size, srcb.stype.size), 'Float')
+    # Type promotion. 
+    if ('unsigned' in srca.stype.qual_list) and ('unsigned' in srcb.stype.qual_list):
+      desttype = Type(None, max(srca.stype.size, srcb.stype.size), 'Int', ['unsigned'])
     else:
-      if (srca.stype.qual_list != None and 'unsigned' in srca.stype.qual_list) \
-          and \
-         (srcb.stype.qual_list != None and 'unsigned' in srcb.stype.qual_list):
-        desttype = Type('', max(srca.stype.size, srcb.stype.size), 'Int', ['unsigned'])
-      else:
-        desttype = Type('', max(srca.stype.size, srcb.stype.size), 'Int')
+      desttype = Type(None, max(srca.stype.size, srcb.stype.size), 'Int')
     
     dest = newTemporary(self.symtab, desttype)
     
