@@ -44,7 +44,9 @@ def token(word):
   for s in symbols : 
     if word in symbols[s] :
       return s
-  try : # If a terminal is not one of the standard tokens but can be converted to float, then it is a number, otherwise, an identifier
+  try : 
+    # If a terminal is not one of the standard tokens but can be converted to
+    # an integer, then it is a number, otherwise, an identifier.
     int(word)
     return 'number'
   except ValueError, e :

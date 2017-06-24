@@ -1,15 +1,15 @@
 #!/usr/bin/python
 
-__doc__='''Minimal support for register allocation'''
+__doc__='''Register allocation pass, using the linear-scan algorithm.
+Assumes that all temporaries can be allocated to any register (because of this,
+it does not work with non integer types).'''
+
 
 from cfg import *
 
 
+# the register of all spilled temporaries is set to SPILL_FLAG
 SPILL_FLAG = 999
-
-
-class NotEnoughRegsException(Exception):
-  pass
 
 
 class minimal_register_allocator(object):
@@ -18,6 +18,7 @@ class minimal_register_allocator(object):
     self.cfg=cfg
     self.nregs=nregs
     self.allocresult=RegisterAllocation(dict(), 0, self.nregs)
+
 
   def __call__(self):
     blockq = self.cfg.heads().values()
@@ -41,7 +42,14 @@ class minimal_register_allocator(object):
     return self.allocresult
     
     
+    
 class RegisterAllocation(object):
+  '''Object that contains the information about where each temporary is
+  allocated.
+  
+  Spill handling is done by reserving 2 machine registers to be filled
+  as late as possible, and spilled again as soon as possible. This class is
+  responsible for filling these registers.'''
 
   def __init__(self, vartoreg, numspill, nregs):
     self.vartoreg = vartoreg
@@ -51,34 +59,52 @@ class RegisterAllocation(object):
     self.spillregi = 0
     self.spillframeoffseti = 0
     
+    
   def update(self, otherra):
     self.vartoreg.update(otherra.vartoreg)
     self.numspill += otherra.numspill
       
+      
   def spillRoom(self):
     return self.numspill * 4;
     
-  # resets the register used for a spill variable when we know that instance
-  # of the variable is dead
-  # we want to keep alternating between one and the other spill-reserved
-  # register so that we don't materialize two spilled variables used in the same
-  # instruction to the same register
+    
   def dematerializeSpilledVarIfNecessary(self, var):
+    '''Resets the register used for a spill variable when we know that instance
+    of the variable is now dead.'''
     if self.vartoreg[var] >= self.nregs - 2:
       self.vartoreg[var] = SPILL_FLAG
     
-  # returns if the variable is spilled
+    
   def materializeSpilledVarIfNecessary(self, var):
+    '''Decide which of the spill-reserved registers to fill with a spilled
+    variable. Also, decides to which stack location the variable is spilled
+    to, the first time this method is called for that variable.
+    
+    Returns True iff the variable was spilled in the register
+    allocation phase.
+    
+    The algorithm used to decide which register is filled is simple: the
+    register chosen is the one that was not chosen the last time. It always
+    works and it never needs any information about which registers are live
+    at a given time.'''
+    
     if self.vartoreg[var] != SPILL_FLAG:
+      # already allocated and filled! nothing to do
       if self.vartoreg[var] >= self.nregs - 2:
         return True;
       return False;
+      
+    # decide the register
     self.vartoreg[var] = self.spillregi + self.nregs - 2
     self.spillregi = (self.spillregi + 1) % 2
+    
+    # decide the location in the current frame
     if not (var in self.vartospillframeoffset):
       self.vartospillframeoffset[var] = self.spillframeoffseti
       self.spillframeoffseti += 4
-    return True;
+    return True
+    
     
   def __repr__(self):
     return 'vartoreg = ' + `self.vartoreg`
@@ -92,7 +118,10 @@ class bb_register_allocator(object):
     self.nregs = nregs
   
     self.vartoreg={}
-    #inherit registers across bbs
+    # when the same variable is used across more than one basic block, the other
+    # basic blocks should inherit the register where the variable was
+    # previously allocated
+    # yet to be implemented because currently it can never happen
     if prevralloc:
       livein = bb.live_in
       for livevar in livein:
@@ -111,6 +140,9 @@ class bb_register_allocator(object):
     
     
   def computeLivenessIntervals(self):
+    '''Simplified one-pass liveness analysis, for a single basic block.
+    It can be done in one pass because in a single basic block there are
+    no branches.'''
     vartolasti = dict()
     livevars = set()
     i = len(self.bb.instrs) - 1
@@ -143,6 +175,9 @@ class bb_register_allocator(object):
                   
     
   def __call__(self):
+    '''Linear-scan register allocation (a variant of the more general
+    graph coloring algorithm known as "left-edge")'''
+    
     self.computeLivenessIntervals()
     
     live = []

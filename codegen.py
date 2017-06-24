@@ -1,16 +1,26 @@
 #!/usr/bin/python
 
+__doc__ = '''Code generation methods for all low-level nodes in the IR.
+Codegen functions return a string, consisting of the assembly code they
+correspond to. Alternatively, they can return a list where:
+ - the first element is the assembly code
+ - the second element is extra assembly code to be appended at the end of
+   the code of the function they are contained in
+This feature can be used only by IR nodes that are contained in a Block, and
+is used for adding constant literals.'''
+
+
 from regalloc import *
 from datalayout import *
 from ir import *
 
 
-localvari = 0
+localconsti = 0
 
 def newLocalConstLabel():
-  global localvari
-  lab = '.const' + `localvari`
-  localvari += 1
+  global localconsti
+  lab = '.const' + `localconsti`
+  localconsti += 1
   return lab 
   
   

@@ -1,24 +1,15 @@
 #!/usr/bin/python
 
 __doc__='''Intermediate Representation
-Could be improved by relying less on class hierarchy and more on string tags and/or duck typing
-Includes lowering and flattening functions'''
+Could be improved by relying less on class hierarchy and more on string tags 
+and/or duck typing. Includes lowering and flattening functions. Every node must
+have a lowering function or a code generation function (codegen functions are
+in a separate module though).'''
 
-# Every node must have a lowering function or a code generation function.
-# Assign statements are more complex than they seem; they typically translate
-# to a store stmt, with the symbol and a temporary as parameters. Var translates
-# to a load statement to the same temporary that is used in a following stage
-# for doing the computations. The expression tree gets flattened to a stmt list
-# larger expressions: last temporary used is the result
 
 from regalloc import *
 from codegenhelp import *
 from datalayout import *
-
-#SYMBOLS AND TYPES
-basetypes = [ 'Int', 'Float', 'Label', 'Struct', 'Function' ]
-qualifiers = [ 'unsigned' ]
-
 
 
 # UTILITIES
@@ -33,6 +24,19 @@ def newTemporary(symtab, type):
 
 
 # TYPES
+
+# NOTE: the type system is very simple, so that we don't need explicit cast
+# instructions or too much handling in the codegen phase.
+# Basically, the type system always behaves as every term of an expression was
+# casted to the biggest type available, and the result is then casted to the
+# biggest of the types of the terms.
+# Also, no handling for primitive types that do not fit in a single machine
+# register is provided.
+
+
+basetypes = [ 'Int', 'Label', 'Struct', 'Function' ]
+qualifiers = [ 'unsigned' ]
+
 
 class Type(object):
   def __init__(self, name, size, basetype, qualifiers=[]):
@@ -53,8 +57,8 @@ class Type(object):
 
 class ArrayType(Type):
   def __init__(self, name, dims, basetype):
-    # dims: set of dimensions: dims = [5] array; dims = [5, 5] matrix...
-    self.name=name
+    '''dims is a list of dimensions: dims = [5]: array of 5 elements; 
+    dims = [5, 5]: 5x5 matrix; and so on'''
     self.dims=dims
     self.size=reduce(lambda a, b: a*b, dims) * basetype.size
     self.basetype=basetype
@@ -76,6 +80,7 @@ class StructType(Type):  # currently unused
   def getSize(self):
     return sum([ f.size for f in self.fields])
     
+    
 class LabelType(Type):
   def __init__(self):
     self.name='label'
@@ -88,6 +93,7 @@ class LabelType(Type):
     self.ids+=1
     return Symbol(name='label'+`self.ids`, stype=self, value=target)
 
+
 class FunctionType(Type):
   def __init__(self):
     self.name='function'
@@ -95,8 +101,10 @@ class FunctionType(Type):
     self.basetype='Function'
     self.qual_list=[]
     
+    
 class PointerType(Type):
   def __init__(self, ptrto):
+    '''ptrto is the type of the object that this pointer points to.'''
     self.name = '&' + ptrto.name
     self.size = 32
     self.basetype = 'Int'
@@ -117,12 +125,15 @@ standard_types = {
 }
 
 
-alloctype = [ 'global', 'auto', 'reg', 'imm' ]   # mem -> auto, global
+alloctype = [ 'global', 'auto', 'reg', 'imm' ]
+
 class Symbol(object):
-  # may be assigned to either:
-  #  - a register
-  #  - a memory location
-  #  - an immediate (but this is produced by later optimizations)
+  '''There are 4 classes of allocation for symbols:\n
+  - allocation to a register ('reg')
+  - allocation to an arbitrary memory location, in the current stack frame 
+    ('auto') or in the data section ('global')
+  - allocation to an immediate ('imm')'''
+  
   def __init__(self, name, stype, value=None, alloct='auto'):
     self.name=name
     self.stype=stype
@@ -198,6 +209,9 @@ class IRNode(object):
     if self.parent != None:
       res += 'parent = ' + `id(self.parent)` + '\n'
     else:
+      # a missing parent is not a bug only for the root node, but at this
+      # level of abstraction there is no way to distinguish between the root
+      # node and a node with a missing parent
       res += '                                                                      <<<<<----- BUG? MISSING PARENT\n'
       
     res=label+res
@@ -275,7 +289,7 @@ class Const(IRNode):
     
     
 class Var(IRNode):
-  # loads in a temporary the value pointed to by the symbol
+  '''loads in a temporary the value pointed to by the symbol'''
   def __init__(self,parent=None, var=None, symtab=None):
     self.parent=parent
     self.symbol=var
@@ -285,15 +299,18 @@ class Var(IRNode):
     return [self.symbol]
     
   def lower(self):
+    '''Var translates to a load statement to the same temporary that is used in
+    a following stage for doing the computations (destination())'''
     new = newTemporary(self.symtab, self.symbol.stype)
     loadst = LoadStat(dest=new, symbol=self.symbol, symtab=self.symtab)
     return self.parent.replace(self, StatList(children=[loadst], symtab=self.symtab))
     
     
 class ArrayElement(IRNode):
-  # loads in a temporary the value pointed by: the symbol + the index
+  '''loads in a temporary the value pointed by: the symbol + the index'''
   def __init__(self, parent=None, var=None, offset=None, symtab=None):
-    # offset can NOT be a list of exps in case of multi-d arrays
+    '''offset can NOT be a list of exps in case of multi-d arrays; it should
+    have already been flattened beforehand'''
     self.parent=parent
     self.symbol=var
     self.symtab=symtab
@@ -324,8 +341,7 @@ class ArrayElement(IRNode):
     
 #EXPRESSIONS
 
-class Expr(IRNode):
-  # ABSTRACT
+class Expr(IRNode):  # ABSTRACT CLASS
   def getOperator(self):
     return self.children[0]
 
@@ -398,7 +414,7 @@ class Stat(IRNode):
       
 
 class CallStat(Stat):
-  '''Procedure call (non returning)'''
+  '''Procedure call'''
   def __init__(self, parent=None, call_expr=None, symtab=None):
     self.parent=parent
     self.call=call_expr
@@ -463,7 +479,7 @@ class WhileStat(Stat):
     return self.parent.replace(self,stat_list)
   
   
-class ForStat(Stat):
+class ForStat(Stat):  # incomplete
   def __init__(self, parent=None, init=None, cond=None, step=None, body=None, symtab=None):
     self.parent=parent
     self.init=init
@@ -509,6 +525,9 @@ class AssignStat(Stat):
     return [self.symbol]
     
   def lower(self):
+    '''Assign statements translate to a store stmt, with the symbol and a
+    temporary as parameters.'''
+    
     src = self.expr.destination()
     dst = self.symbol
     
@@ -517,7 +536,7 @@ class AssignStat(Stat):
     if self.offset:
       off = self.offset.destination()
       desttype = dst.stype
-      if type(desttype) is ArrayType:
+      if type(desttype) is ArrayType:  # this is always true at the moment
         desttype = desttype.basetype
       ptrreg = newTemporary(self.symtab, PointerType(desttype))
       loadptr = LoadPtrToSym(dest=ptrreg, symbol=dst, symtab=self.symtab)
@@ -546,7 +565,7 @@ class PrintStat(Stat):
     return self.parent.replace(self, stlist)
     
     
-class PrintCommand(Stat):   # ll
+class PrintCommand(Stat):   # low-level node
   def __init__(self, parent=None, src=None, symtab=None):
     self.parent=parent
     self.src=src
@@ -573,7 +592,7 @@ class ReadStat(Stat):
     return self.parent.replace(self, stlist)
     
     
-class ReadCommand(Stat):   # ll
+class ReadCommand(Stat):   # low-level node
   def __init__(self, parent=None, dest=None, symtab=None):
     self.parent=parent
     self.dest=dest
@@ -594,11 +613,15 @@ class ReadCommand(Stat):   # ll
     return 'read ' + `self.dest`
 
 
-class BranchStat(Stat):   # ll
+class BranchStat(Stat):   # low-level node
   def __init__(self, parent=None, cond=None, target=None, symtab=None, returns=False, negcond=False):
+    '''cond == None -> branch always taken.
+    If negcond is True and Cond != None, the branch is taken when cond is false,
+    otherwise the branch is taken when cond is true.
+    If returns is True, this is a branch-and-link instruction.'''
     self.parent=parent
-    self.cond=cond # cond == None -> True
-    self.negcond=negcond # if True and Cond != None, the branch is taken when cond is false
+    self.cond=cond
+    self.negcond=negcond
     if not (self.cond is None) and self.cond.alloct != 'reg':
       raise RuntimeError('condition not in register')
     self.target=target
@@ -627,15 +650,18 @@ class BranchStat(Stat):   # ll
     return h + c + ' to ' + `self.target`
       
 
-class EmptyStat(Stat):  # ll
+class EmptyStat(Stat):  # low-level node
   pass
 
   def collect_uses(self):
     return []
     
     
-class LoadPtrToSym(Stat):  # ll
+class LoadPtrToSym(Stat):  # low-level node
   def __init__(self, parent=None, dest=None, symbol=None,  symtab=None):
+    '''Loads to the 'dest' symbol the location in memory (as an absolute 
+    address) of 'symbol'. This instruction is used as a starting point for 
+    lowering nodes which need any kind of pointer arithmetic.'''
     self.parent = parent
     self.symbol = symbol
     self.symtab = symtab
@@ -658,17 +684,19 @@ class LoadPtrToSym(Stat):  # ll
     return `self.dest` + ' <- &(' + `self.symbol` + ')'
 
 
-class StoreStat(Stat):  # ll
+class StoreStat(Stat):  # low-level node
   # store the symbol to the specified destination + offset
   def __init__(self, parent=None, dest=None, symbol=None, killhint=None, symtab=None):
+    '''Stores the value in the 'symbol' temporary (register) to 'dest' which
+    can be a symbol allocated in memory, or a temporary (symbol allocated to a
+    register). In the first case, the store is done to the symbol itself; in
+    the second case the dest symbol is used as a pointer to an arbitrary
+    location in memory.'''
     self.parent=parent
     self.symbol=symbol
     if self.symbol.alloct != 'reg':
       raise RuntimeError('store not from register')
     self.symtab=symtab
-    # if self.dest is a register, the register contains the destination
-    # address; if self.dest is a memory symbol, the store is done to the memory
-    # location that will be allocated to that symbol
     self.dest = dest
     self.killhint = killhint
     
@@ -694,9 +722,13 @@ class StoreStat(Stat):  # ll
     return `self.dest` + ' <- ' + `self.symbol`
 
 
-class LoadStat(Stat):  # ll
-  # load the value pointed to by the specified symbol + offset
+class LoadStat(Stat):  # low-level node
   def __init__(self, parent=None, dest=None, symbol=None, usehint=None, symtab=None):
+    '''Loads the value in symbol to dest, which must be a temporary. 'symbol'
+    can be a symbol allocated in memory, or a temporary (symbol allocated to a
+    register). In the first case, the value contained in the symbol itself is
+    loaded; in the second case the symbol is used as a pointer to an arbitrary
+    location in memory.'''
     self.parent=parent
     self.symbol=symbol
     self.symtab=symtab
@@ -723,7 +755,7 @@ class LoadStat(Stat):  # ll
       return `self.dest` + ' <- ' + `self.symbol`
     
     
-class LoadImmStat(Stat):  # ll
+class LoadImmStat(Stat):  # low-level node
   def __init__(self, parent=None, dest=None, val=0, symtab=None):
     self.parent=parent
     self.val = val
@@ -744,7 +776,7 @@ class LoadImmStat(Stat):  # ll
     return `self.dest` + ' <- ' + `self.val`
     
     
-class BinStat(Stat):  # ll
+class BinStat(Stat):  # low-level node
   def __init__(self, parent=None, dest=None, op=None, srca=None, srcb=None, symtab=None):
     self.parent = parent
     self.dest = dest   # symbol
@@ -770,7 +802,7 @@ class BinStat(Stat):  # ll
     return `self.dest` + ' <- ' + `self.srca` + ' ' + self.op + ' ' + `self.srcb`
     
     
-class UnaryStat(Stat):  # ll
+class UnaryStat(Stat):  # low-level node
   def __init__(self, parent=None, dest=None, op=None, src=None, symtab=None):
     self.parent = parent
     self.dest = dest
@@ -795,7 +827,7 @@ class UnaryStat(Stat):  # ll
     return `self.dest` + ' <- ' + self.op + ' ' + `self.src`
 
 
-class StatList(Stat):  # ll
+class StatList(Stat):  # low-level node
   def __init__(self,parent=None, children=None, symtab=None):
     print 'StatList : new', id(self)
     self.parent=parent
@@ -849,7 +881,6 @@ class StatList(Stat):  # ll
     return None
       
       
-
 class Block(Stat):
   def __init__(self, parent=None, gl_sym=None, lc_sym=None, defs=None, body=None):
     self.parent=parent
@@ -864,10 +895,12 @@ class Block(Stat):
   
 
 #DEFINITIONS
+
 class Definition(IRNode):
   def __init__(self, parent=None, symbol=None):
     self.parent=parent
     self.symbol=symbol
+
 
 class FunctionDef(Definition):
   def __init__(self, parent=None, symbol=None, body=None):
@@ -878,6 +911,7 @@ class FunctionDef(Definition):
 
   def getGlobalSymbols(self):
     return self.body.global_symtab.exclude([standard_types['function'],standard_types['label']])
+
 
 class DefinitionList(IRNode):
   def __init__(self,parent=None, children=None):

@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
-__doc__='''Support functions for visiting the AST
-These functions expose high level interfaces (passes) for actions that can be applied to multiple IR nodes.'''
+__doc__='''Support functions for visiting the AST and the IR tree (which are
+the same thing in this compiler).
+These functions expose high level interfaces (passes) for actions that can be
+applied to multiple IR nodes.'''
 
 def get_node_list(root):
   '''Get a list of all nodes in the AST'''

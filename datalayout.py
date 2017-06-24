@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+__doc__ = '''Data layout computation pass. Each symbol whose location (alloct)
+is not a register, is allocated in the local stack frame (LocalSymbol) or in
+the data section of the executable (GlobalSymbol).'''
+
+
 from ir import *
 
 

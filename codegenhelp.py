@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+__doc__ = '''Helper functions used by the code generator'''
+
+
 from regalloc import *
 from datalayout import *
 
@@ -50,8 +53,6 @@ def comment(cont):
   return '@ ' + cont + '\n'
   
   
-# codegen functions can return an array if they need to add extra stuff at
-# the end of all the code (for example, constants)
 def codegenAppend(vec, code):
   if type(code) is list:
     return [vec[0] + code[0], vec[1] + code[1]]
@@ -70,6 +71,7 @@ def enterFunctionBody(self, block):
 def genSpillLoadIfNecessary(self, var):
   self.dematerializeSpilledVarIfNecessary(var)
   if not self.materializeSpilledVarIfNecessary(var):
+    # not a spilled variable
     return ''
   offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
   rd = self.getRegisterForVariable(var)
@@ -86,6 +88,7 @@ def getRegisterForVariable(self, var):
 
 def genSpillStoreIfNecessary(self, var):
   if not self.materializeSpilledVarIfNecessary(var):
+    # not a spilled variable
     return ''
   offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
   rd = self.getRegisterForVariable(var)
