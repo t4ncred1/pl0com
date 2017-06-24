@@ -237,7 +237,7 @@ def vardef(symtab, alloct='auto'):
     type = standard_types[value]
     
   if len(size) > 0:
-    symtab.append(Symbol(name, ArrayType(name, size, type), alloct=alloct))
+    symtab.append(Symbol(name, ArrayType(None, size, type), alloct=alloct))
   else:
     symtab.append(Symbol(name, type, alloct=alloct))
   
