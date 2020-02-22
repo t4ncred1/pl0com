@@ -7,3 +7,4 @@ test*
 *.s
 
 out
+.idea
