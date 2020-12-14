@@ -1,9 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__ = '''PL/0 recursive descent parser adapted from Wikipedia'''
 
 from ir import *
 from logger import logger
+from functools import reduce
 
 symbols =  [ 'ident', 'number', 'lparen', 'rparen', 'times', 'slash', 'plus', 
 'minus', 'eql', 'neq', 'lss', 'leq', 'gtr', 'geq', 'callsym', 'beginsym', 
@@ -24,21 +25,21 @@ def getsym():
   try :
     sym=new_sym
     value=new_value
-    new_sym, new_value=the_lexer.next()
+    new_sym, new_value=next(the_lexer)
   except StopIteration :
     return 2
-  print 'getsym:', new_sym, new_value
+  print('getsym:', new_sym, new_value)
   return 1
   
 def error(msg):
-  print '\033[31m', msg, new_sym, new_value, '\033[39m'
+  print('\033[31m', msg, new_sym, new_value, '\033[39m')
   
 def accept(s):
-  print 'accepting', s, '==', new_sym
+  print('accepting', s, '==', new_sym)
   return getsym() if new_sym==s else 0
  
 def expect(s) :
-  print 'expecting', s
+  print('expecting', s)
   if accept(s) : return 1
   error("expect: unexpected symbol")
   return 0
@@ -65,7 +66,7 @@ def linearizeMultidVector(explist, target, symtab):
     else:
       planedisp = 1
     idx = explist[i]
-    esize = (target.stype.basetype.size / 8) * planedisp;
+    esize = (target.stype.basetype.size // 8) * planedisp
     planed = BinExpr(children=['times', idx, Const(value=esize, symtab=symtab)], symtab=symtab)
     if offset == None:
       offset = planed
@@ -127,7 +128,7 @@ def condition(symtab) :
     expr = expression(symtab);
     if new_sym in [ 'eql', 'neq', 'lss', 'leq', 'gtr', 'geq' ] :
       getsym()
-      print 'condition operator', sym, new_sym
+      print('condition operator', sym, new_sym)
       op=sym
       expr2 = expression(symtab)
       return BinExpr(children=[op, expr, expr2 ], symtab=symtab)
@@ -257,7 +258,7 @@ if __name__ == '__main__' :
   from lexer import lexer, __test_program
   the_lexer=lexer(__test_program)
   res = program()
-  print '\n', res, '\n'
+  print('\n', res, '\n')
       
   res.navigate(print_stat_list)
   from support import *
@@ -265,26 +266,26 @@ if __name__ == '__main__' :
 
   node_list=get_node_list(res)
   for n in node_list :
-    print type(n), id(n), '->', type(n.parent), id(n.parent)
-  print '\nTotal nodes in IR:', len(node_list), '\n'
+    print(type(n), id(n), '->', type(n.parent), id(n.parent))
+  print('\nTotal nodes in IR:', len(node_list), '\n')
 
   res.navigate(lowering)
 
   node_list=get_node_list(res)
-  print '\n', res, '\n'
+  print('\n', res, '\n')
   for n in node_list :
-    print type(n), id(n)
+    print(type(n), id(n))
     try : n.flatten()
     except Exception :  pass
   #res.navigate(flattening)
-  print '\n', res, '\n'
+  print('\n', res, '\n')
 
   print_dotty(res,"log.dot")
   
   from datalayout import *
-  print "\n\nDATALAYOUT\n\n"
+  print("\n\nDATALAYOUT\n\n")
   performDataLayout(res)
-  print '\n', res, '\n'
+  print('\n', res, '\n')
 
   from cfg import *
   cfg=CFG(res)
@@ -293,15 +294,15 @@ if __name__ == '__main__' :
   cfg.print_cfg_to_dot("cfg.dot")
    
   from regalloc import *
-  print "\n\nREGALLOC\n\n"
+  print("\n\nREGALLOC\n\n")
   ra = minimal_register_allocator(cfg, 11)
   reg_alloc = ra()
-  print reg_alloc
+  print(reg_alloc)
   
   from codegen import *
-  print "\n\nCODEGEN\n\n"
+  print("\n\nCODEGEN\n\n")
   code = generateCode(res, reg_alloc)
-  print code
+  print(code)
   
   import sys
   if len(sys.argv) == 2:

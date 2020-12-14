@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__ = '''Helper functions used by the code generator'''
 
@@ -22,7 +22,7 @@ def getRegisterString(regid):
     return 'lr'
   if regid == REG_SP:
     return 'sp'
-  return 'r'+`regid`
+  return 'r'+repr(regid)
   
   
 def saveRegs(reglist):
@@ -75,7 +75,7 @@ def genSpillLoadIfNecessary(self, var):
     return ''
   offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
   rd = self.getRegisterForVariable(var)
-  res = '\tldr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
+  res = '\tldr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + repr(offs) + ']'
   res += '\t' + comment('<<- fill')
   return res
   
@@ -92,7 +92,7 @@ def genSpillStoreIfNecessary(self, var):
     return ''
   offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
   rd = self.getRegisterForVariable(var)
-  res = '\tstr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + `offs` + ']'
+  res = '\tstr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + repr(offs) + ']'
   res += '\t' + comment('<<- spill')
   self.dematerializeSpilledVarIfNecessary(var)
   return res

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__='''Support functions for visiting the AST and the IR tree (which are
 the same thing in this compiler).
@@ -37,11 +37,11 @@ def lowering(node):
   (all high level nodes can be lowered to lower-level representation'''
   try :
     check=node.lower()
-    print 'Lowering', type(node), id(node)
+    print('Lowering', type(node), id(node))
     if not check : 
-      print 'Failed!'
-  except Exception, e :
-    print 'Cannot lower', id(node), type(node), e
+      print('Failed!')
+  except Exception as e :
+    print('Cannot lower', id(node), type(node), e)
     pass # lowering not yet implemented for this class
 
 def flattening(node):
@@ -49,10 +49,10 @@ def flattening(node):
   (only StatList nodes are actually flattened)'''
   try :
     check=node.flatten()
-    print 'Flattening', type(node), id(node)
+    print('Flattening', type(node), id(node))
     if not check : 
-      print 'Failed!'
-  except Exception, e :
+      print('Failed!')
+  except Exception as e :
     #print type(node), e
     pass # this type of node cannot be flattened
 
@@ -60,14 +60,13 @@ def flattening(node):
 def dotty_wrapper(fout):
   '''Main function for graphviz dot output generation'''
   def dotty_function(irnode):
-    from string import split, join
     from ir import Stat
     attrs = set(['body','cond', 'thenpart','elsepart', 'call', 'step', 'expr', 'target', 'defs' ]) & set(dir(irnode))
   
-    res=`id(irnode)`+' ['
+    res=repr(id(irnode))+' ['
     if isinstance(irnode,Stat):
       res+='shape=box,'
-    res+='label="'+`type(irnode)`+' '+`id(irnode)`
+    res+='label="'+repr(type(irnode))+' '+repr(id(irnode))
     try : res+=': '+irnode.value
     except Exception : pass
     try : res+=': '+irnode.name
@@ -78,15 +77,15 @@ def dotty_wrapper(fout):
   
     if 'children' in dir(irnode) and len(irnode.children) :
       for node in irnode.children :
-        res+=`id(irnode)`+' -> '+`id(node)`+' [pos='+`irnode.children.index(node)`+'];\n'
+        res+=repr(id(irnode))+' -> '+repr(id(node))+' [pos='+repr(irnode.children.index(node))+'];\n'
         if type(node) == str :
-          res+=`id(node)`+' [label='+node+'];\n'
+          res+=repr(id(node))+' [label='+node+'];\n'
     for d in attrs :
       node=getattr(irnode,d)
       if d == 'target' :
-        res+=`id(irnode)`+' -> '+`id(node.value)`+' [label='+node.name+'];\n'
+        res+=repr(id(irnode))+' -> '+repr(id(node.value))+' [label='+node.name+'];\n'
       else :
-        res+=`id(irnode)`+' -> '+`id(node)`+';\n'
+        res+=repr(id(irnode))+' -> '+repr(id(node))+';\n'
     fout.write(res)
     return res
   return dotty_function

@@ -1,12 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__ = '''Logging function using decorators
 Usage: decorate monitored function with "@logger"'''
 
 def logger(f):
   def wrapped(*args, **kwargs):
-    print 'start', f
+    print('start', f)
     res = f(*args, **kwargs)
-    print 'end', f
+    print('end', f)
     return res
   return wrapped

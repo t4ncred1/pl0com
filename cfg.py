@@ -1,9 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__ = '''Control Flow Graph implementation
 Includes cfg construction and liveness analysis.'''
 
 from support import get_node_list, get_symbol_tables
+from functools import reduce
 
 class BasicBlock(object):
   def __init__(self, next=None, instrs=None, labels=None):
@@ -41,16 +42,15 @@ class BasicBlock(object):
 
   def __repr__(self):
     '''Print in graphviz dot format'''
-    from string import join
-    instrs = `self.labels`+'\\n' if len(self.labels) else ''
-    instrs+=join([ `i` for i in self.instrs ],'\\n')
-    res=`id(self)`+' [label="BB'+`id(self)`+'{\\n'+instrs+'}"];\n'
+    instrs = repr(self.labels)+'\\n' if len(self.labels) else ''
+    instrs+='\\n'.join([ repr(i) for i in self.instrs ])
+    res=repr(id(self))+' [label="BB'+repr(id(self))+'{\\n'+instrs+'}"];\n'
     if self.next :
-      res+=`id(self)`+' -> '+`id(self.next)`+' [label="'+`self.next.live_in`+'"];\n'
+      res+=repr(id(self))+' -> '+repr(id(self.next))+' [label="'+repr(self.next.live_in)+'"];\n'
     if self.target_bb : 
-      res+=`id(self)`+' -> '+`id(self.target_bb)`+' [style=dashed,label="'+`self.target_bb.live_in`+'"];\n'
+      res+=repr(id(self))+' -> '+repr(id(self.target_bb))+' [style=dashed,label="'+repr(self.target_bb.live_in)+'"];\n'
     if not ( self.next or self.target_bb ) :
-      res+=`id(self)`+' -> '+'exit'+`id(self.getFunction())`+' [label="'+`self.live_out`+'"];\n'
+      res+=repr(id(self))+' -> '+'exit'+repr(id(self.getFunction()))+' [label="'+repr(self.live_out)+'"];\n'
     return res
 
   def succ(self):
@@ -125,6 +125,7 @@ def removeNonRegs(set):
 class CFG(list):
   '''Control Flow Graph representation'''
   def __init__(self, root):
+    super().__init__()
     from ir import StatList, LabelType
     stat_lists = [ n for n in get_node_list(root) if isinstance(n,StatList) ]
     self += sum([ stat_list_to_bb(sl) for sl in stat_lists ],[])
@@ -160,27 +161,27 @@ class CFG(list):
     '''Print the CFG in graphviz dot to file'''
     f=open(filename,"w")
     f.write("digraph G {\n")
-    for n in self : f.write(`n`)
+    for n in self : f.write(repr(n))
     h =self.heads()
     for p in h:
       bb=h[p]
       if p=='global' :
         f.write('main [shape=box];\n')
-        f.write('main -> '+`id(bb)`+' [label="'+`bb.live_in`+'"];\n')
+        f.write('main -> '+repr(id(bb))+' [label="'+repr(bb.live_in)+'"];\n')
       else :
         f.write(p.symbol.name+' [shape=box];\n')
-        f.write(p.symbol.name+' -> '+`id(bb)`+' [label="'+`bb.live_in`+'"];\n')
+        f.write(p.symbol.name+' -> '+repr(id(bb))+' [label="'+repr(bb.live_in)+'"];\n')
     f.write("}\n")
     f.close()
   
   def print_liveness(self):
-    print 'Liveness sets'
+    print('Liveness sets')
     for bb in self :
-      print bb
-      print 'gen:', bb.gen
-      print 'kill:', bb.kill
-      print 'live_in:', bb.live_in
-      print 'live_out:', bb.live_out
+      print(bb)
+      print('gen:', bb.gen)
+      print('kill:', bb.kill)
+      print('live_in:', bb.live_in)
+      print('live_out:', bb.live_out)
 
   def find_target_bb(self, label):
     '''Return the BB that contains a given label;
@@ -188,7 +189,7 @@ class CFG(list):
     for bb in self :
       if label in bb.labels :
         return bb
-    raise Exception(`label`+' not found in any BB!')
+    raise Exception(repr(label)+' not found in any BB!')
 
   def liveness(self):
     '''Standard live variable analysis'''

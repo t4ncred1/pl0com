@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__ = '''Data layout computation pass. Each symbol whose location (alloct)
 is not a register, is allocated in the local stack frame (LocalSymbol) or in
@@ -21,8 +21,8 @@ class LocalSymbolLayout(SymbolLayout):
     self.bsize = bsize
     
   def __repr__(self):
-    return self.symname + ": fp + (" + `self.fpreloff` + ") [def byte " + \
-           `self.bsize` + "]"
+    return self.symname + ": fp + (" + repr(self.fpreloff) + ") [def byte " + \
+           repr(self.bsize) + "]"
     
 
 class GlobalSymbolLayout(SymbolLayout):
@@ -31,7 +31,7 @@ class GlobalSymbolLayout(SymbolLayout):
     self.bsize = bsize
     
   def __repr__(self):
-    return self.symname + ": def byte " + `self.bsize`
+    return self.symname + ": def byte " + repr(self.bsize)
     
     
 def performDataLayout(root):
@@ -46,7 +46,7 @@ def performDataLayoutOfFunction(funcroot):
   for var in funcroot.body.local_symtab:
     if var.stype.size == 0:
       continue
-    bsize = var.stype.size / 8
+    bsize = var.stype.size // 8
     offs -= bsize
     var.setAllocInfo(LocalSymbolLayout(prefix + var.name, offs, bsize))
   funcroot.body.stackroom = -offs
@@ -57,6 +57,6 @@ def performDataLayoutOfProgram(root):
   for var in root.local_symtab:
     if var.stype.size == 0:
       continue
-    var.setAllocInfo(GlobalSymbolLayout(prefix + var.name, var.stype.size / 8))
+    var.setAllocInfo(GlobalSymbolLayout(prefix + var.name, var.stype.size // 8))
 
 

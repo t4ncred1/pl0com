@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__='''Register allocation pass, using the linear-scan algorithm.
 Assumes that all temporaries can be allocated to any register (because of this,
@@ -21,7 +21,7 @@ class minimal_register_allocator(object):
 
 
   def __call__(self):
-    blockq = self.cfg.heads().values()
+    blockq = list(self.cfg.heads().values())
     i = 0
     while i < len(blockq):
       n = blockq[i].succ()
@@ -33,9 +33,9 @@ class minimal_register_allocator(object):
       
       bbra = bb_register_allocator(blockq[i], self.nregs)
       thisalloc = bbra()
-      print "block:", `id(blockq[i])`
-      print "varliveness:\n", `bbra.varliveness`
-      print "ralloc:\n", `thisalloc`, "\n"
+      print("block:", repr(id(blockq[i])))
+      print("varliveness:\n", repr(bbra.varliveness))
+      print("ralloc:\n", repr(thisalloc), "\n")
       self.allocresult.update(thisalloc)
       i += 1
 
@@ -107,7 +107,7 @@ class RegisterAllocation(object):
     
     
   def __repr__(self):
-    return 'vartoreg = ' + `self.vartoreg`
+    return 'vartoreg = ' + repr(self.vartoreg)
     
     
     
@@ -127,7 +127,7 @@ class bb_register_allocator(object):
       for livevar in livein:
         if prevralloc[livevar]:
           self.vartoreg[livevar] = prevralloc[livevar]
-          raise Exception, "register inheritance not fully implemented"
+          raise Exception("register inheritance not fully implemented")
     
     # liveness of a variable on entry to each instruction
     # in order of start point

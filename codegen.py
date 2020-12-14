@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__ = '''Code generation methods for all low-level nodes in the IR.
 Codegen functions return a string, consisting of the assembly code they
@@ -19,7 +19,7 @@ localconsti = 0
 
 def newLocalConstLabel():
   global localconsti
-  lab = '.const' + `localconsti`
+  lab = '.const' + repr(localconsti)
   localconsti += 1
   return lab 
   
@@ -34,15 +34,15 @@ def symbol_codegen(self, regalloc):
   if self.allocinfo is None:
     return ""
   if not isinstance(self.allocinfo, LocalSymbolLayout):
-    return '\t.comm '+ self.allocinfo.symname + ', ' + `self.allocinfo.bsize` + "\n"
+    return '\t.comm '+ self.allocinfo.symname + ', ' + repr(self.allocinfo.bsize) + "\n"
   else:
-    return '\t.equ ' + self.allocinfo.symname + ', ' + `self.allocinfo.fpreloff` + "\n"
+    return '\t.equ ' + self.allocinfo.symname + ', ' + repr(self.allocinfo.fpreloff) + "\n"
 
 Symbol.codegen = symbol_codegen
 
 
 def irnode_codegen(self, regalloc):
-  res = ['\t' + comment("irnode " + `id(self)` + ' type ' + `type(self)`), '']
+  res = ['\t' + comment("irnode " + repr(id(self)) + ' type ' + repr(type(self))), '']
   if 'children' in dir(self) and len(self.children):
     for node in self.children:
       try: 
@@ -53,8 +53,8 @@ def irnode_codegen(self, regalloc):
           pass
         res = codegenAppend(res, node.codegen(regalloc))
       except Exception as e: 
-        res[0] += "\t" + comment("node " + `id(node)` + " did not generate any code")
-        res[0] += "\t" + comment("exc: " + `e`)
+        res[0] += "\t" + comment("node " + repr(id(node)) + " did not generate any code")
+        res[0] += "\t" + comment("exc: " + repr(e))
   return res
   
 IRNode.codegen = irnode_codegen
@@ -72,7 +72,7 @@ def block_codegen(self, regalloc):
   res[0] += saveRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
   res[0] += '\tmov ' + getRegisterString(REG_FP) + ', ' + getRegisterString(REG_SP) + '\n'
   stacksp = self.stackroom + regalloc.spillRoom()
-  res[0] += '\tsub ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_SP) + ', #' + `stacksp` + '\n'
+  res[0] += '\tsub ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_SP) + ', #' + repr(stacksp) + '\n'
   
   regalloc.enterFunctionBody(self)
   try:
@@ -151,7 +151,7 @@ def binstat_codegen(self, regalloc):
     res += '\tmovge ' + rd + ', #1\n'
     res += '\tmovlt ' + rd + ', #0\n'
   else:
-    raise Exception, "operation " + `self.op` + " unexpected"
+    raise Exception("operation " + repr(self.op) + " unexpected")
   return res + regalloc.genSpillStoreIfNecessary(self.dest)
   
 BinStat.codegen = binstat_codegen
@@ -233,9 +233,9 @@ def ldptrto_codegen(self, regalloc):
   if type(ai) is LocalSymbolLayout:
     off = ai.fpreloff
     if off > 0:
-      res = '\tadd ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + `off` + '\n'
+      res = '\tadd ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + repr(off) + '\n'
     else:
-      res = '\tsub ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + `-off` + '\n'
+      res = '\tsub ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + repr(-off) + '\n'
   else:
     lab, tmp = newLocalConst(ai.symname)
     trail += tmp
@@ -265,7 +265,7 @@ def storestat_codegen(self, regalloc):
     desttype = self.dest.stype.pointstotype
   else:
     desttype = self.dest.stype
-  typeid = ['b', 'h', None, ''][desttype.size / 8 - 1]
+  typeid = ['b', 'h', None, ''][desttype.size // 8 - 1]
   if typeid != '' and 'unsigned' in desttype.qual_list:
     typeid = 's' + type
   
@@ -296,7 +296,7 @@ def loadstat_codegen(self, regalloc):
     desttype = self.symbol.stype.pointstotype
   else:
     desttype = self.symbol.stype
-  typeid = ['b', 'h', None, ''][desttype.size / 8 - 1]
+  typeid = ['b', 'h', None, ''][desttype.size // 8 - 1]
   if typeid != '' and 'unsigned' in desttype.qual_list:
     typeid = 's' + type
   
@@ -318,10 +318,10 @@ def loadimm_codegen(self, regalloc):
     else:
       rv = val
       op = 'mov '
-    res = '\t' + op + rd + ', #' + `rv` + '\n'
+    res = '\t' + op + rd + ', #' + repr(rv) + '\n'
     trail = ''
   else:
-    lab, trail = newLocalConst(`val`)
+    lab, trail = newLocalConst(repr(val))
     res = '\tldr ' + rd + ', ' + lab + '\n'
   return [res + regalloc.genSpillStoreIfNecessary(self.dest), trail]
     
@@ -341,7 +341,7 @@ def unarystat_codegen(self, regalloc):
   elif self.op == 'odd':
     res += '\tand ' + rd + ', ' + rs + ', #1\n'
   else:
-    raise Exception, "operation " + `self.op` + " unexpected"
+    raise Exception("operation " + repr(self.op) + " unexpected")
   res += regalloc.genSpillStoreIfNecessary(self.dest)
   return res
   

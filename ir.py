@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__='''Intermediate Representation
 Could be improved by relying less on class hierarchy and more on string tags 
@@ -10,6 +10,7 @@ in a separate module though).'''
 from regalloc import *
 from codegenhelp import *
 from datalayout import *
+from functools import reduce
 
 
 # UTILITIES
@@ -50,7 +51,7 @@ class Type(object):
     if 'unsigned' in self.qual_list:
       n += 'u'
     n += 'int' # no float types exist at the moment
-    n += `self.size`
+    n += repr(self.size)
     n += '_t'
     return n
 
@@ -66,7 +67,7 @@ class ArrayType(Type):
     self.name=name if name else self.defaultName()
     
   def defaultName(self):
-    return self.basetype.name + `self.dims`
+    return self.basetype.name + repr(self.dims)
 
 
 class StructType(Type):  # currently unused
@@ -91,7 +92,7 @@ class LabelType(Type):
   
   def __call__(self,target=None):
     self.ids+=1
-    return Symbol(name='label'+`self.ids`, stype=self, value=target)
+    return Symbol(name='label'+repr(self.ids), stype=self, value=target)
 
 
 class FunctionType(Type):
@@ -148,16 +149,16 @@ class Symbol(object):
     base = self.alloct + ' ' + self.stype.name + ' ' + self.name + \
            ( self.value if type(self.value)==str else '')
     if not self.allocinfo is None:
-      base = base + "; " + `self.allocinfo`
+      base = base + "; " + repr(self.allocinfo)
     return base
     
 
 class SymbolTable(list):
   def find(self, name):
-    print 'Looking up', name
+    print('Looking up', name)
     for s in self :
       if s.name==name : return s
-    print 'Looking up failed!'
+    print('Looking up failed!')
     return None
 
   def __repr__(self):
@@ -190,11 +191,9 @@ class IRNode(object):
   
   
   def __repr__(self):
-    from string import split, join
-    
     try :
       label=self.getLabel().name + ': '
-    except Exception, e :
+    except Exception as e :
       label=''
       pass
     try:
@@ -205,9 +204,9 @@ class IRNode(object):
     
     attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab', 'offset' ]) & set(dir(self))
 
-    res=`type(self)`+' '+`id(self)`+' {\n'
+    res=repr(type(self))+' '+repr(id(self))+' {\n'
     if self.parent != None:
-      res += 'parent = ' + `id(self.parent)` + '\n'
+      res += 'parent = ' + repr(id(self.parent)) + '\n'
     else:
       # a missing parent is not a bug only for the root node, but at this
       # level of abstraction there is no way to distinguish between the root
@@ -221,11 +220,11 @@ class IRNode(object):
       res+='\tchildren:\n'
       for node in self.children :
         rep=repr(node)
-        res+=join([ '\t'+s for s in rep.split('\n') ],'\n')+'\n'
+        res+='\n'.join([ '\t'+s for s in rep.split('\n') ])+'\n'
     for d in attrs :
       node=getattr(self,d)
       rep=repr(node)
-      res+='\t'+d+': '+join([ '\t'+s for s in rep.split('\n') ],'\n')+'\n'    
+      res+='\t'+d+': '+'\n'.join([ '\t'+s for s in rep.split('\n') ])+'\n'
     res+='}'
     return res
 
@@ -233,14 +232,14 @@ class IRNode(object):
   def navigate(self, action):
     attrs = set(['body','cond', 'value','thenpart','elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs', 'global_symtab', 'local_symtab', 'offset']) & set(dir(self))
     if 'children' in dir(self) and len(self.children) :
-      print 'navigating children of', type(self), id(self), len(self.children)
+      print('navigating children of', type(self), id(self), len(self.children))
       for node in self.children :
         try : node.navigate(action)
         except Exception : pass
     for d in attrs :
       try :
         getattr(self,d).navigate(action)
-        print 'successfully navigated attr ',d,' of', type(self), id(self)
+        print('successfully navigated attr ',d,' of', type(self), id(self))
       except Exception : pass
     action(self)
   
@@ -358,8 +357,8 @@ class BinExpr(Expr):
     return self.children[1:]
     
   def lower(self):
-    srca = self.children[1].destination();
-    srcb = self.children[2].destination();
+    srca = self.children[1].destination()
+    srcb = self.children[2].destination()
     
     # Type promotion. 
     if ('unsigned' in srca.stype.qual_list) and ('unsigned' in srcb.stype.qual_list):
@@ -577,7 +576,7 @@ class PrintCommand(Stat):   # low-level node
     return [self.src]
 
   def humanRepr(self):
-    return 'print ' + `self.src`
+    return 'print ' + repr(self.src)
     
     
 class ReadStat(Stat):
@@ -610,7 +609,7 @@ class ReadCommand(Stat):   # low-level node
     return [self.dest]
 
   def humanRepr(self):
-    return 'read ' + `self.dest`
+    return 'read ' + repr(self.dest)
 
 
 class BranchStat(Stat):   # low-level node
@@ -644,10 +643,10 @@ class BranchStat(Stat):   # low-level node
     else:
       h = 'branch '
     if not (self.cond is None):
-      c = 'on ' + ('not ' if self.negcond else '') + `self.cond`
+      c = 'on ' + ('not ' if self.negcond else '') + repr(self.cond)
     else:
       c = ''
-    return h + c + ' to ' + `self.target`
+    return h + c + ' to ' + repr(self.target)
       
 
 class EmptyStat(Stat):  # low-level node
@@ -681,7 +680,7 @@ class LoadPtrToSym(Stat):  # low-level node
     return self.dest
     
   def humanRepr(self):
-    return `self.dest` + ' <- &(' + `self.symbol` + ')'
+    return repr(self.dest) + ' <- &(' + repr(self.symbol) + ')'
 
 
 class StoreStat(Stat):  # low-level node
@@ -718,8 +717,8 @@ class StoreStat(Stat):  # low-level node
   
   def humanRepr(self):
     if self.dest.alloct == 'reg':
-      return '[' + `self.dest` + '] <- ' + `self.symbol`
-    return `self.dest` + ' <- ' + `self.symbol`
+      return '[' + repr(self.dest) + '] <- ' + repr(self.symbol)
+    return repr(self.dest) + ' <- ' + repr(self.symbol)
 
 
 class LoadStat(Stat):  # low-level node
@@ -750,9 +749,9 @@ class LoadStat(Stat):  # low-level node
     
   def humanRepr(self):
     if self.symbol.alloct == 'reg':
-      return `self.dest` + ' <- [' + `self.symbol` + ']'
+      return repr(self.dest) + ' <- [' + repr(self.symbol) + ']'
     else:
-      return `self.dest` + ' <- ' + `self.symbol`
+      return repr(self.dest) + ' <- ' + repr(self.symbol)
     
     
 class LoadImmStat(Stat):  # low-level node
@@ -773,7 +772,7 @@ class LoadImmStat(Stat):  # low-level node
     return self.dest
     
   def humanRepr(self):
-    return `self.dest` + ' <- ' + `self.val`
+    return repr(self.dest) + ' <- ' + repr(self.val)
     
     
 class BinStat(Stat):  # low-level node
@@ -799,7 +798,7 @@ class BinStat(Stat):  # low-level node
     return self.dest
     
   def humanRepr(self):
-    return `self.dest` + ' <- ' + `self.srca` + ' ' + self.op + ' ' + `self.srcb`
+    return repr(self.dest) + ' <- ' + repr(self.srca) + ' ' + self.op + ' ' + repr(self.srcb)
     
     
 class UnaryStat(Stat):  # low-level node
@@ -824,12 +823,12 @@ class UnaryStat(Stat):  # low-level node
     return self.dest
     
   def humanRepr(self):
-    return `self.dest` + ' <- ' + self.op + ' ' + `self.src`
+    return repr(self.dest) + ' <- ' + self.op + ' ' + repr(self.src)
 
 
 class StatList(Stat):  # low-level node
   def __init__(self,parent=None, children=None, symtab=None):
-    print 'StatList : new', id(self)
+    print('StatList : new', id(self))
     self.parent=parent
     if children : 
       self.children=children[:]
@@ -840,7 +839,7 @@ class StatList(Stat):  # low-level node
     
   def append(self, elem):
     elem.parent=self
-    print 'StatList: appending', id(elem), 'of type', type(elem), 'to', id(self)
+    print('StatList: appending', id(elem), 'of type', type(elem), 'to', id(self))
     self.children.append(elem)
 
   def collect_uses(self):
@@ -850,15 +849,15 @@ class StatList(Stat):  # low-level node
     return u
     
   def print_content(self):
-      print 'StatList', id(self), ': [',
+      print('StatList', id(self), ': [', end=' ')
       for n in self.children :
-        print id(n),
-      print ']'
+        print(id(n), end=' ')
+      print(']')
 
   def flatten(self):
     '''Remove nested StatLists'''
     if type(self.parent)==StatList :
-      print 'Flattening', id(self), 'into', id(self.parent)
+      print('Flattening', id(self), 'into', id(self.parent))
       for c in self.children :
         c.parent=self.parent
       try : 
@@ -869,7 +868,7 @@ class StatList(Stat):  # low-level node
       self.parent.children=self.parent.children[:i]+self.children+self.parent.children[i+1:]
       return True
     else :
-      print 'Not flattening', id(self), 'into', id(self.parent), 'of type', type(self.parent)
+      print('Not flattening', id(self), 'into', id(self.parent), 'of type', type(self.parent))
       return False
       
   def destination(self):
@@ -926,10 +925,10 @@ class DefinitionList(IRNode):
 
 def print_stat_list(node):
   '''Navigation action: print'''
-  print type(node), id(node)
+  print(type(node), id(node))
   if type(node)==StatList :
-    print 'StatList', id(node), ': [',
+    print('StatList', id(node), ': [', end=' ')
     for n in node.children :
-      print id(n),
-    print ']'
+      print(id(n), end=' ')
+    print(']')
   

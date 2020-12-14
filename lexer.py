@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 __doc__='''Simple lexer for PL/0 using generators'''
 
@@ -49,17 +49,16 @@ def token(word):
     # an integer, then it is a number, otherwise, an identifier.
     int(word)
     return 'number'
-  except ValueError, e :
+  except ValueError as e :
     return 'ident'
 
 def lexer(text) :
   '''Generator implementation of a lexer'''
   import re
-  from string import split, strip, lower, join
   t=re.sub('(\{[^\}]*\})', '', text) # remove comments in the *worst possible way*
   t=re.split('(\W+)',t) # Split at non alphanumeric sequences
-  text=join(t,' ') # Join alphanumeric and non-alphanumeric, with spaces
-  words=[ strip(w) for w in split(lower(text)) ] # Split tokens
+  text=' '.join(t) # Join alphanumeric and non-alphanumeric, with spaces
+  words=[ w.strip() for w in text.lower().split() ] # Split tokens
   for word in words :
     yield token(word), word
 
@@ -117,4 +116,4 @@ END.'''
 
 if __name__ == '__main__' :
   for t,w in lexer(__test_program) :
-    print t, w
+    print(t, w)
