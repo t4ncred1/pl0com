@@ -10,10 +10,10 @@ from support import get_node_list
 
 class BasicBlock(object):
     def __init__(self, next=None, instrs=None, labels=None):
-        '''Structure:
+        """Structure:
         Zero, one (next) or two (next, target_bb) successors
         Keeps information on labels (list of labels that refer to this BB)
-        '''
+        """
         self.next = next
         if instrs:
             self.instrs = instrs
@@ -48,7 +48,7 @@ class BasicBlock(object):
         self.total_vars_used = len(self.gen.union(self.kill))
 
     def __repr__(self):
-        '''Print in graphviz dot format'''
+        """Print in graphviz dot format"""
         instrs = repr(self.labels) + '\\n' if len(self.labels) else ''
         instrs += '\\n'.join([repr(i) for i in self.instrs])
         res = repr(id(self)) + ' [label="BB' + repr(id(self)) + '{\\n' + instrs + '}"];\n'
@@ -58,7 +58,7 @@ class BasicBlock(object):
             res += repr(id(self)) + ' -> ' + repr(id(self.target_bb)) + ' [style=dashed,label="' + repr(
                 self.target_bb.live_in) + '"];\n'
         if not (self.next or self.target_bb):
-            res += repr(id(self)) + ' -> ' + 'exit' + repr(id(self.getFunction())) + ' [label="' + repr(
+            res += repr(id(self)) + ' -> ' + 'exit' + repr(id(self.get_function())) + ' [label="' + repr(
                 self.live_out) + '"];\n'
         return res
 
@@ -66,32 +66,32 @@ class BasicBlock(object):
         return [s for s in [self.target_bb, self.next] if s]
 
     def liveness_iteration(self):
-        '''Compute live_in and live_out approximation
-        Returns: check of fixed point'''
+        """Compute live_in and live_out approximation
+        Returns: check of fixed point"""
         lin = len(self.live_in)
         lout = len(self.live_out)
         if self.next or self.target_bb:
             self.live_out = reduce(lambda x, y: x.union(y), [s.live_in for s in self.succ()], set([]))
         else:  # Consider live out all the global vars
-            func = self.getFunction()
+            func = self.get_function()
             if func != 'global': self.live_out = set(func.getGlobalSymbols())
         self.live_in = self.gen.union(self.live_out - self.kill)
         return not (lin == len(self.live_in) and lout == len(self.live_out))
 
     def remove_useless_next(self):
-        '''Check if unconditional branch, in that case remove next'''
+        """Check if unconditional branch, in that case remove next"""
         try:
             if self.instrs[-1].is_unconditional():
                 self.next = None
         except AttributeError:
             pass
 
-    def getFunction(self):
+    def get_function(self):
         return self.instrs[0].get_function()
 
 
 def stat_list_to_bb(sl):
-    '''Support function for converting AST StatList to BBs'''
+    """Support function for converting AST StatList to BBs"""
     from ir import BranchStat
     bbs = []
     newbb = []  # accumulator for stmts to be inserted in the next BB
@@ -128,12 +128,12 @@ def stat_list_to_bb(sl):
     return bbs
 
 
-def removeNonRegs(set):
+def remove_non_regs(set):
     return {var for var in set if var.alloct == 'reg'}
 
 
 class CFG(list):
-    '''Control Flow Graph representation'''
+    """Control Flow Graph representation"""
 
     def __init__(self, root):
         super().__init__()
@@ -146,7 +146,7 @@ class CFG(list):
             bb.remove_useless_next()
 
     def heads(self):
-        '''Get bbs that are only reached via function call or global entry point'''
+        """Get bbs that are only reached via function call or global entry point"""
         defs = []
         for bb1 in self:
             head = True
@@ -169,7 +169,7 @@ class CFG(list):
         return res
 
     def print_cfg_to_dot(self, filename):
-        '''Print the CFG in graphviz dot to file'''
+        """Print the CFG in graphviz dot to file"""
         f = open(filename, "w")
         f.write("digraph G {\n")
         for n in self: f.write(repr(n))
@@ -195,15 +195,15 @@ class CFG(list):
             print('live_out:', bb.live_out)
 
     def find_target_bb(self, label):
-        '''Return the BB that contains a given label;
-        Support function for creating/exploring the CFG'''
+        """Return the BB that contains a given label;
+        Support function for creating/exploring the CFG"""
         for bb in self:
             if label in bb.labels:
                 return bb
         raise Exception(repr(label) + ' not found in any BB!')
 
     def liveness(self):
-        '''Standard live variable analysis'''
+        """Standard live variable analysis"""
         out = []
         for bb in self:
             out.append(bb.liveness_iteration())

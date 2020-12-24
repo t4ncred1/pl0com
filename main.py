@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__doc__ = '''The main function of the compiler, AKA the compiler driver'''
+"""The main function of the compiler, AKA the compiler driver"""
 
 from lexer import lexer
 from frontend import *

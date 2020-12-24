@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-__doc__ = '''Intermediate Representation
+"""Intermediate Representation
 Could be improved by relying less on class hierarchy and more on string tags 
 and/or duck typing. Includes lowering and flattening functions. Every node must
 have a lowering function or a code generation function (codegen functions are
-in a separate module though).'''
+in a separate module though)."""
 
 from codegenhelp import *
 
@@ -54,8 +54,8 @@ class Type(object):
 
 class ArrayType(Type):
     def __init__(self, name, dims, basetype):
-        '''dims is a list of dimensions: dims = [5]: array of 5 elements;
-        dims = [5, 5]: 5x5 matrix; and so on'''
+        """dims is a list of dimensions: dims = [5]: array of 5 elements;
+        dims = [5, 5]: 5x5 matrix; and so on"""
         self.dims = dims
         self.size = reduce(lambda a, b: a * b, dims) * basetype.size
         self.basetype = basetype
@@ -101,7 +101,7 @@ class FunctionType(Type):
 
 class PointerType(Type):
     def __init__(self, ptrto):
-        '''ptrto is the type of the object that this pointer points to.'''
+        """ptrto is the type of the object that this pointer points to."""
         self.name = '&' + ptrto.name
         self.size = 32
         self.basetype = 'Int'
@@ -125,11 +125,11 @@ alloctype = ['global', 'auto', 'reg', 'imm']
 
 
 class Symbol(object):
-    '''There are 4 classes of allocation for symbols:\n
+    """There are 4 classes of allocation for symbols:\n
     - allocation to a register ('reg')
     - allocation to an arbitrary memory location, in the current stack frame
       ('auto') or in the data section ('global')
-    - allocation to an immediate ('imm')'''
+    - allocation to an immediate ('imm')"""
 
     def __init__(self, name, stype, value=None, alloct='auto'):
         self.name = name
@@ -289,7 +289,7 @@ class Const(IRNode):
 
 
 class Var(IRNode):
-    '''loads in a temporary the value pointed to by the symbol'''
+    """loads in a temporary the value pointed to by the symbol"""
 
     def __init__(self, parent=None, var=None, symtab=None):
         self.parent = parent
@@ -300,19 +300,19 @@ class Var(IRNode):
         return [self.symbol]
 
     def lower(self):
-        '''Var translates to a load statement to the same temporary that is used in
-        a following stage for doing the computations (destination())'''
+        """Var translates to a load statement to the same temporary that is used in
+        a following stage for doing the computations (destination())"""
         new = new_temporary(self.symtab, self.symbol.stype)
         loadst = LoadStat(dest=new, symbol=self.symbol, symtab=self.symtab)
         return self.parent.replace(self, StatList(children=[loadst], symtab=self.symtab))
 
 
 class ArrayElement(IRNode):
-    '''loads in a temporary the value pointed by: the symbol + the index'''
+    """loads in a temporary the value pointed by: the symbol + the index"""
 
     def __init__(self, parent=None, var=None, offset=None, symtab=None):
-        '''offset can NOT be a list of exps in case of multi-d arrays; it should
-        have already been flattened beforehand'''
+        """offset can NOT be a list of exps in case of multi-d arrays; it should
+        have already been flattened beforehand"""
         self.parent = parent
         self.symbol = var
         self.symtab = symtab
@@ -420,7 +420,7 @@ class Stat(IRNode):
 
 
 class CallStat(Stat):
-    '''Procedure call'''
+    """Procedure call"""
 
     def __init__(self, parent=None, call_expr=None, symtab=None):
         self.parent = parent
@@ -535,8 +535,8 @@ class AssignStat(Stat):
         return [self.symbol]
 
     def lower(self):
-        '''Assign statements translate to a store stmt, with the symbol and a
-        temporary as parameters.'''
+        """Assign statements translate to a store stmt, with the symbol and a
+        temporary as parameters."""
 
         src = self.expr.destination()
         dst = self.symbol
@@ -625,10 +625,10 @@ class ReadCommand(Stat):  # low-level node
 
 class BranchStat(Stat):  # low-level node
     def __init__(self, parent=None, cond=None, target=None, symtab=None, returns=False, negcond=False):
-        '''cond == None -> branch always taken.
+        """cond == None -> branch always taken.
         If negcond is True and Cond != None, the branch is taken when cond is false,
         otherwise the branch is taken when cond is true.
-        If returns is True, this is a branch-and-link instruction.'''
+        If returns is True, this is a branch-and-link instruction."""
         self.parent = parent
         self.cond = cond
         self.negcond = negcond
@@ -669,9 +669,9 @@ class EmptyStat(Stat):  # low-level node
 
 class LoadPtrToSym(Stat):  # low-level node
     def __init__(self, parent=None, dest=None, symbol=None, symtab=None):
-        '''Loads to the 'dest' symbol the location in memory (as an absolute
+        """Loads to the 'dest' symbol the location in memory (as an absolute
         address) of 'symbol'. This instruction is used as a starting point for
-        lowering nodes which need any kind of pointer arithmetic.'''
+        lowering nodes which need any kind of pointer arithmetic."""
         self.parent = parent
         self.symbol = symbol
         self.symtab = symtab
@@ -697,11 +697,11 @@ class LoadPtrToSym(Stat):  # low-level node
 class StoreStat(Stat):  # low-level node
     # store the symbol to the specified destination + offset
     def __init__(self, parent=None, dest=None, symbol=None, killhint=None, symtab=None):
-        '''Stores the value in the 'symbol' temporary (register) to 'dest' which
+        """Stores the value in the 'symbol' temporary (register) to 'dest' which
         can be a symbol allocated in memory, or a temporary (symbol allocated to a
         register). In the first case, the store is done to the symbol itself; in
         the second case the dest symbol is used as a pointer to an arbitrary
-        location in memory.'''
+        location in memory."""
         self.parent = parent
         self.symbol = symbol
         if self.symbol.alloct != 'reg':
@@ -734,11 +734,11 @@ class StoreStat(Stat):  # low-level node
 
 class LoadStat(Stat):  # low-level node
     def __init__(self, parent=None, dest=None, symbol=None, usehint=None, symtab=None):
-        '''Loads the value in symbol to dest, which must be a temporary. 'symbol'
+        """Loads the value in symbol to dest, which must be a temporary. 'symbol'
         can be a symbol allocated in memory, or a temporary (symbol allocated to a
         register). In the first case, the value contained in the symbol itself is
         loaded; in the second case the symbol is used as a pointer to an arbitrary
-        location in memory.'''
+        location in memory."""
         self.parent = parent
         self.symbol = symbol
         self.symtab = symtab
@@ -867,7 +867,7 @@ class StatList(Stat):  # low-level node
         print(']')
 
     def flatten(self):
-        '''Remove nested StatLists'''
+        """Remove nested StatLists"""
         if type(self.parent) == StatList:
             print('Flattening', id(self), 'into', id(self.parent))
             for c in self.children:
@@ -938,7 +938,7 @@ class DefinitionList(IRNode):
 
 
 def print_stat_list(node):
-    '''Navigation action: print'''
+    """Navigation action: print"""
     print(type(node), id(node))
     if type(node) == StatList:
         print('StatList', id(node), ': [', end=' ')

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-__doc__ = '''Support functions for visiting the AST and the IR tree (which are
+"""Support functions for visiting the AST and the IR tree (which are
 the same thing in this compiler).
 These functions expose high level interfaces (passes) for actions that can be
-applied to multiple IR nodes.'''
+applied to multiple IR nodes."""
 
 
 def get_node_list(root):
-    '''Get a list of all nodes in the AST'''
+    """Get a list of all nodes in the AST"""
 
     def register_nodes(l):
         def r(node):
@@ -22,7 +22,7 @@ def get_node_list(root):
 
 
 def get_symbol_tables(root):
-    '''Get a list of all symtabs in the AST'''
+    """Get a list of all symtabs in the AST"""
 
     def register_nodes(l):
         def r(node):
@@ -43,8 +43,8 @@ def get_symbol_tables(root):
 
 
 def lowering(node):
-    '''Lowering action for a node
-    (all high level nodes can be lowered to lower-level representation'''
+    """Lowering action for a node
+    (all high level nodes can be lowered to lower-level representation"""
     try:
         check = node.lower()
         print('Lowering', type(node), id(node))
@@ -56,8 +56,8 @@ def lowering(node):
 
 
 def flattening(node):
-    '''Flattening action for a node
-    (only StatList nodes are actually flattened)'''
+    """Flattening action for a node
+    (only StatList nodes are actually flattened)"""
     try:
         check = node.flatten()
         print('Flattening', type(node), id(node))
@@ -69,7 +69,7 @@ def flattening(node):
 
 
 def dotty_wrapper(fout):
-    '''Main function for graphviz dot output generation'''
+    """Main function for graphviz dot output generation"""
 
     def dotty_function(irnode):
         from ir import Stat
@@ -113,7 +113,7 @@ def dotty_wrapper(fout):
 
 
 def print_dotty(root, filename):
-    '''Print a graphviz dot representation to file'''
+    """Print a graphviz dot representation to file"""
     fout = open(filename, "w")
     fout.write("digraph G {\n")
     node_list = get_node_list(root)

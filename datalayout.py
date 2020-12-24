@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-__doc__ = '''Data layout computation pass. Each symbol whose location (alloct)
+"""Data layout computation pass. Each symbol whose location (alloct)
 is not a register, is allocated in the local stack frame (LocalSymbol) or in
-the data section of the executable (GlobalSymbol).'''
-
-from ir import *
+the data section of the executable (GlobalSymbol)."""
 
 
 class SymbolLayout(object):

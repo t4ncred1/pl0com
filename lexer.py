@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__doc__ = '''Simple lexer for PL/0 using generators'''
+"""Simple lexer for PL/0 using generators"""
 
 # Tokens can have multiple definitions if needed
 symbols = {
@@ -41,7 +41,7 @@ symbols = {
 
 
 def token(word):
-    '''Return corresponding token for a given word'''
+    """Return corresponding token for a given word"""
     for s in symbols:
         if word in symbols[s]:
             return s
@@ -55,7 +55,7 @@ def token(word):
 
 
 def lexer(text):
-    '''Generator implementation of a lexer'''
+    """Generator implementation of a lexer"""
     import re
     t = re.sub('(\{[^\}]*\})', '', text)  # remove comments in the *worst possible way*
     t = re.split('(\W+)', t)  # Split at non alphanumeric sequences

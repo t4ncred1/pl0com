@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__doc__ = '''PL/0 recursive descent parser adapted from Wikipedia'''
+"""PL/0 recursive descent parser adapted from Wikipedia"""
 
 from ir import *
 from logger import logger
@@ -19,7 +19,7 @@ the_lexer = None
 
 
 def getsym():
-    '''Update sym'''
+    """Update sym"""
     global new_sym
     global new_value
     global sym
@@ -254,7 +254,7 @@ def vardef(symtab, alloct='auto'):
 
 @logger
 def program(this_lexer):
-    '''Axiom'''
+    """Axiom"""
     global the_lexer
     the_lexer = this_lexer
     global_symtab = SymbolTable()

@@ -125,7 +125,7 @@ class bb_register_allocator(object):
 
         self.allvars = bb.live_in.union(bb.live_out)
         self.allvars = self.allvars.union(bb.gen.union(bb.kill))
-        self.allvars = removeNonRegs(self.allvars)
+        self.allvars = remove_non_regs(self.allvars)
         self.allvars = list(self.allvars)
 
     def compute_liveness_intervals(self):
@@ -138,8 +138,8 @@ class bb_register_allocator(object):
 
         while i >= 0:
             inst = self.bb.instrs[i]
-            kills = removeNonRegs(inst.collect_kills())
-            uses = removeNonRegs(inst.collect_uses())
+            kills = remove_non_regs(inst.collect_kills())
+            uses = remove_non_regs(inst.collect_uses())
             livevars -= kills
             livevars |= uses
 

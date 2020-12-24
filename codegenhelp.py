@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-__doc__ = '''Helper functions used by the code generator'''
+"""Helper functions used by the code generator"""
 
-from datalayout import *
 from regalloc import *
 
 REG_FP = 11
