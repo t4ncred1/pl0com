@@ -87,7 +87,7 @@ class BasicBlock(object):
             pass
 
     def getFunction(self):
-        return self.instrs[0].getFunction()
+        return self.instrs[0].get_function()
 
 
 def stat_list_to_bb(sl):
@@ -98,7 +98,7 @@ def stat_list_to_bb(sl):
     labels = []  # accumulator for the labels that refer to this BB
     for n in sl.children:
         try:
-            label = n.getLabel()
+            label = n.get_label()
             if label:
                 if len(newbb):
                     bb = BasicBlock(None, newbb, labels)

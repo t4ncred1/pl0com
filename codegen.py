@@ -15,15 +15,15 @@ from ir import *
 localconsti = 0
 
 
-def newLocalConstLabel():
+def new_local_const_label():
     global localconsti
     lab = '.const' + repr(localconsti)
     localconsti += 1
     return lab
 
 
-def newLocalConst(val):
-    lab = newLocalConstLabel()
+def new_local_const(val):
+    lab = new_local_const_label()
     trail = lab + ':\n\t.word ' + val + '\n'
     return lab, trail
 
@@ -46,11 +46,11 @@ def irnode_codegen(self, regalloc):
         for node in self.children:
             try:
                 try:
-                    labl = node.getLabel()
+                    labl = node.get_label()
                     res[0] += labl.name + ':\n'
                 except Exception:
                     pass
-                res = codegenAppend(res, node.codegen(regalloc))
+                res = codegen_append(res, node.codegen(regalloc))
             except Exception as e:
                 res[0] += "\t" + comment("node " + repr(id(node)) + " did not generate any code")
                 res[0] += "\t" + comment("exc: " + repr(e))
@@ -63,32 +63,32 @@ IRNode.codegen = irnode_codegen
 def block_codegen(self, regalloc):
     res = [comment('block'), '']
     for sym in self.local_symtab:
-        res = codegenAppend(res, sym.codegen(regalloc))
+        res = codegen_append(res, sym.codegen(regalloc))
 
     if self.parent is None:
         res[0] += '\t.global __pl0_start\n'
         res[0] += "__pl0_start:\n"
 
-    res[0] += saveRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
-    res[0] += '\tmov ' + getRegisterString(REG_FP) + ', ' + getRegisterString(REG_SP) + '\n'
-    stacksp = self.stackroom + regalloc.spillRoom()
-    res[0] += '\tsub ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_SP) + ', #' + repr(stacksp) + '\n'
+    res[0] += save_regs(REGS_CALLEESAVE + [REG_FP, REG_LR])
+    res[0] += '\tmov ' + get_register_string(REG_FP) + ', ' + get_register_string(REG_SP) + '\n'
+    stacksp = self.stackroom + regalloc.spill_room()
+    res[0] += '\tsub ' + get_register_string(REG_SP) + ', ' + get_register_string(REG_SP) + ', #' + repr(stacksp) + '\n'
 
-    regalloc.enterFunctionBody(self)
+    regalloc.enter_function_body(self)
     try:
-        res = codegenAppend(res, self.body.codegen(regalloc))
+        res = codegen_append(res, self.body.codegen(regalloc))
     except Exception:
         pass
 
-    res[0] += '\tmov ' + getRegisterString(REG_SP) + ', ' + getRegisterString(REG_FP) + '\n'
-    res[0] += restoreRegs(REGS_CALLEESAVE + [REG_FP, REG_LR])
+    res[0] += '\tmov ' + get_register_string(REG_SP) + ', ' + get_register_string(REG_FP) + '\n'
+    res[0] += restore_regs(REGS_CALLEESAVE + [REG_FP, REG_LR])
     res[0] += '\tbx lr\n'
 
     res[0] = res[0] + res[1]
     res[1] = ''
 
     try:
-        res = codegenAppend(res, self.defs.codegen(regalloc))
+        res = codegen_append(res, self.defs.codegen(regalloc))
     except Exception:
         pass
 
@@ -115,11 +115,11 @@ FunctionDef.codegen = fun_codegen
 
 
 def binstat_codegen(self, regalloc):
-    res = regalloc.genSpillLoadIfNecessary(self.srca)
-    res += regalloc.genSpillLoadIfNecessary(self.srcb)
-    ra = regalloc.getRegisterForVariable(self.srca)
-    rb = regalloc.getRegisterForVariable(self.srcb)
-    rd = regalloc.getRegisterForVariable(self.dest)
+    res = regalloc.gen_spill_load_if_necessary(self.srca)
+    res += regalloc.gen_spill_load_if_necessary(self.srcb)
+    ra = regalloc.get_register_for_variable(self.srca)
+    rb = regalloc.get_register_for_variable(self.srcb)
+    rd = regalloc.get_register_for_variable(self.dest)
     param = ra + ', ' + rb
     if self.op == "plus":
         res += '\tadd ' + rd + ', ' + param + '\n'
@@ -155,19 +155,19 @@ def binstat_codegen(self, regalloc):
         res += '\tmovlt ' + rd + ', #0\n'
     else:
         raise Exception("operation " + repr(self.op) + " unexpected")
-    return res + regalloc.genSpillStoreIfNecessary(self.dest)
+    return res + regalloc.gen_spill_store_if_necessary(self.dest)
 
 
 BinStat.codegen = binstat_codegen
 
 
 def print_codegen(self, regalloc):
-    res = regalloc.genSpillLoadIfNecessary(self.src)
-    rp = regalloc.getRegisterForVariable(self.src)
-    res += saveRegs(REGS_CALLERSAVE)
-    res += '\tmov ' + getRegisterString(0) + ', ' + rp + '\n'
+    res = regalloc.gen_spill_load_if_necessary(self.src)
+    rp = regalloc.get_register_for_variable(self.src)
+    res += save_regs(REGS_CALLERSAVE)
+    res += '\tmov ' + get_register_string(0) + ', ' + rp + '\n'
     res += '\tbl __print\n'
-    res += restoreRegs(REGS_CALLERSAVE)
+    res += restore_regs(REGS_CALLERSAVE)
     return res
 
 
@@ -175,7 +175,7 @@ PrintCommand.codegen = print_codegen
 
 
 def read_codegen(self, regalloc):
-    rd = regalloc.getRegisterForVariable(self.dest)
+    rd = regalloc.get_register_for_variable(self.dest)
 
     # punch a hole in the saved registers if one of them is the destination
     # of this "instruction"
@@ -183,11 +183,11 @@ def read_codegen(self, regalloc):
     if regalloc.vartoreg[self.dest] in savedregs:
         savedregs.remove(regalloc.vartoreg[self.dest])
 
-    res = saveRegs(savedregs)
+    res = save_regs(savedregs)
     res += '\tbl __read\n'
-    res += '\tmov ' + rd + ', ' + getRegisterString(0) + '\n'
-    res += restoreRegs(savedregs)
-    res += regalloc.genSpillStoreIfNecessary(self.dest)
+    res += '\tmov ' + rd + ', ' + get_register_string(0) + '\n'
+    res += restore_regs(savedregs)
+    res += regalloc.gen_spill_store_if_necessary(self.dest)
     return res
 
 
@@ -200,24 +200,24 @@ def branch_codegen(self, regalloc):
         if self.cond is None:
             return '\tb ' + targetl + '\n'
         else:
-            res = regalloc.genSpillLoadIfNecessary(self.cond)
-            rcond = regalloc.getRegisterForVariable(self.cond)
+            res = regalloc.gen_spill_load_if_necessary(self.cond)
+            rcond = regalloc.get_register_for_variable(self.cond)
             res += '\ttst ' + rcond + ', ' + rcond + '\n'
             return res + '\t' + ('beq' if self.negcond else 'bne') + ' ' + targetl + '\n'
     else:
         if self.cond is None:
-            res = saveRegs(REGS_CALLERSAVE)
+            res = save_regs(REGS_CALLERSAVE)
             res += '\tbl ' + targetl + '\n'
-            res += restoreRegs(REGS_CALLERSAVE)
+            res += restore_regs(REGS_CALLERSAVE)
             return res
         else:
-            res = regalloc.genSpillLoadIfNecessary(self.cond)
-            rcond = regalloc.getRegisterForVariable(self.cond)
+            res = regalloc.gen_spill_load_if_necessary(self.cond)
+            rcond = regalloc.get_register_for_variable(self.cond)
             res += '\ttst ' + rcond + ', ' + rcond + '\n'
             res += '\t' + ('bne' if self.negcond else 'beq') + ' ' + rcond + ', 1f\n'
-            res += saveRegs(REGS_CALLERSAVE)
+            res += save_regs(REGS_CALLERSAVE)
             res += '\tbl ' + targetl + '\n'
-            res += restoreRegs(REGS_CALLERSAVE)
+            res += restore_regs(REGS_CALLERSAVE)
             res += '1:'
             return res
     return comment('impossible!')
@@ -234,21 +234,21 @@ EmptyStat.codegen = emptystat_codegen
 
 
 def ldptrto_codegen(self, regalloc):
-    rd = regalloc.getRegisterForVariable(self.dest)
+    rd = regalloc.get_register_for_variable(self.dest)
     res = ''
     trail = ''
     ai = self.symbol.allocinfo
     if type(ai) is LocalSymbolLayout:
         off = ai.fpreloff
         if off > 0:
-            res = '\tadd ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + repr(off) + '\n'
+            res = '\tadd ' + rd + ', ' + get_register_string(REG_FP) + ', #' + repr(off) + '\n'
         else:
-            res = '\tsub ' + rd + ', ' + getRegisterString(REG_FP) + ', #' + repr(-off) + '\n'
+            res = '\tsub ' + rd + ', ' + get_register_string(REG_FP) + ', #' + repr(-off) + '\n'
     else:
-        lab, tmp = newLocalConst(ai.symname)
+        lab, tmp = new_local_const(ai.symname)
         trail += tmp
         res = '\tldr ' + rd + ', ' + lab + '\n'
-    return [res + regalloc.genSpillStoreIfNecessary(self.dest), trail]
+    return [res + regalloc.gen_spill_store_if_necessary(self.dest), trail]
 
 
 LoadPtrToSym.codegen = ldptrto_codegen
@@ -258,17 +258,17 @@ def storestat_codegen(self, regalloc):
     res = ''
     trail = ''
     if self.dest.alloct == 'reg':
-        res += regalloc.genSpillLoadIfNecessary(self.dest)
-        dest = '[' + regalloc.getRegisterForVariable(self.dest) + ']'
+        res += regalloc.gen_spill_load_if_necessary(self.dest)
+        dest = '[' + regalloc.get_register_for_variable(self.dest) + ']'
     else:
         ai = self.dest.allocinfo
         if type(ai) is LocalSymbolLayout:
-            dest = '[' + getRegisterString(REG_FP) + ', #' + ai.symname + ']'
+            dest = '[' + get_register_string(REG_FP) + ', #' + ai.symname + ']'
         else:
-            lab, tmp = newLocalConst(ai.symname)
+            lab, tmp = new_local_const(ai.symname)
             trail += tmp
-            res += '\tldr ' + getRegisterString(REG_SCRATCH) + ', ' + lab + '\n'
-            dest = '[' + getRegisterString(REG_SCRATCH) + ']'
+            res += '\tldr ' + get_register_string(REG_SCRATCH) + ', ' + lab + '\n'
+            dest = '[' + get_register_string(REG_SCRATCH) + ']'
 
     if type(self.dest.stype) is PointerType:
         desttype = self.dest.stype.pointstotype
@@ -278,8 +278,8 @@ def storestat_codegen(self, regalloc):
     if typeid != '' and 'unsigned' in desttype.qual_list:
         typeid = 's' + type
 
-    res += regalloc.genSpillLoadIfNecessary(self.symbol)
-    rsrc = regalloc.getRegisterForVariable(self.symbol)
+    res += regalloc.gen_spill_load_if_necessary(self.symbol)
+    rsrc = regalloc.get_register_for_variable(self.symbol)
     return [res + '\tstr' + typeid + ' ' + rsrc + ', ' + dest + '\n', trail]
 
 
@@ -290,17 +290,17 @@ def loadstat_codegen(self, regalloc):
     res = ''
     trail = ''
     if self.symbol.alloct == 'reg':
-        res += regalloc.genSpillLoadIfNecessary(self.symbol)
-        src = '[' + regalloc.getRegisterForVariable(self.symbol) + ']'
+        res += regalloc.gen_spill_load_if_necessary(self.symbol)
+        src = '[' + regalloc.get_register_for_variable(self.symbol) + ']'
     else:
         ai = self.symbol.allocinfo
         if type(ai) is LocalSymbolLayout:
-            src = '[' + getRegisterString(REG_FP) + ', #' + ai.symname + ']'
+            src = '[' + get_register_string(REG_FP) + ', #' + ai.symname + ']'
         else:
-            lab, tmp = newLocalConst(ai.symname)
+            lab, tmp = new_local_const(ai.symname)
             trail += tmp
-            res += '\tldr ' + getRegisterString(REG_SCRATCH) + ', ' + lab + '\n'
-            src = '[' + getRegisterString(REG_SCRATCH) + ']'
+            res += '\tldr ' + get_register_string(REG_SCRATCH) + ', ' + lab + '\n'
+            src = '[' + get_register_string(REG_SCRATCH) + ']'
 
     if type(self.symbol.stype) is PointerType:
         desttype = self.symbol.stype.pointstotype
@@ -310,9 +310,9 @@ def loadstat_codegen(self, regalloc):
     if typeid != '' and 'unsigned' in desttype.qual_list:
         typeid = 's' + type
 
-    rdst = regalloc.getRegisterForVariable(self.dest)
+    rdst = regalloc.get_register_for_variable(self.dest)
     res += '\tldr' + typeid + ' ' + rdst + ', ' + src + '\n'
-    res += regalloc.genSpillStoreIfNecessary(self.dest)
+    res += regalloc.gen_spill_store_if_necessary(self.dest)
     return [res, trail]
 
 
@@ -320,7 +320,7 @@ LoadStat.codegen = loadstat_codegen
 
 
 def loadimm_codegen(self, regalloc):
-    rd = regalloc.getRegisterForVariable(self.dest)
+    rd = regalloc.get_register_for_variable(self.dest)
     val = self.val
     if val >= -256 and val < 256:
         if val < 0:
@@ -332,18 +332,18 @@ def loadimm_codegen(self, regalloc):
         res = '\t' + op + rd + ', #' + repr(rv) + '\n'
         trail = ''
     else:
-        lab, trail = newLocalConst(repr(val))
+        lab, trail = new_local_const(repr(val))
         res = '\tldr ' + rd + ', ' + lab + '\n'
-    return [res + regalloc.genSpillStoreIfNecessary(self.dest), trail]
+    return [res + regalloc.gen_spill_store_if_necessary(self.dest), trail]
 
 
 LoadImmStat.codegen = loadimm_codegen
 
 
 def unarystat_codegen(self, regalloc):
-    res = regalloc.genSpillLoadIfNecessary(self.src)
-    rs = regalloc.getRegisterForVariable(self.src)
-    rd = regalloc.getRegisterForVariable(self.dest)
+    res = regalloc.gen_spill_load_if_necessary(self.src)
+    rs = regalloc.get_register_for_variable(self.src)
+    rd = regalloc.get_register_for_variable(self.dest)
     if self.op == 'plus':
         if rs != rd:
             res += '\tmov ' + rd + ', ' + rs + '\n'
@@ -354,7 +354,7 @@ def unarystat_codegen(self, regalloc):
         res += '\tand ' + rd + ', ' + rs + ', #1\n'
     else:
         raise Exception("operation " + repr(self.op) + " unexpected")
-    res += regalloc.genSpillStoreIfNecessary(self.dest)
+    res += regalloc.gen_spill_store_if_necessary(self.dest)
     return res
 
 

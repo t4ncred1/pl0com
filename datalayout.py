@@ -33,13 +33,13 @@ class GlobalSymbolLayout(SymbolLayout):
         return self.symname + ": def byte " + repr(self.bsize)
 
 
-def performDataLayout(root):
-    performDataLayoutOfProgram(root)
+def perform_data_layout(root):
+    perform_data_layout_of_program(root)
     for defin in root.defs.children:
-        performDataLayoutOfFunction(defin)
+        perform_data_layout_of_function(defin)
 
 
-def performDataLayoutOfFunction(funcroot):
+def perform_data_layout_of_function(funcroot):
     offs = 0  # prev fp
     prefix = "_l_" + funcroot.symbol.name + "_"
     for var in funcroot.body.local_symtab:
@@ -47,13 +47,13 @@ def performDataLayoutOfFunction(funcroot):
             continue
         bsize = var.stype.size // 8
         offs -= bsize
-        var.setAllocInfo(LocalSymbolLayout(prefix + var.name, offs, bsize))
+        var.set_alloc_info(LocalSymbolLayout(prefix + var.name, offs, bsize))
     funcroot.body.stackroom = -offs
 
 
-def performDataLayoutOfProgram(root):
+def perform_data_layout_of_program(root):
     prefix = "_g_"
     for var in root.local_symtab:
         if var.stype.size == 0:
             continue
-        var.setAllocInfo(GlobalSymbolLayout(prefix + var.name, var.stype.size // 8))
+        var.set_alloc_info(GlobalSymbolLayout(prefix + var.name, var.stype.size // 8))

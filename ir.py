@@ -13,7 +13,7 @@ from codegenhelp import *
 tempcount = 0
 
 
-def newTemporary(symtab, type):
+def new_temporary(symtab, type):
     global tempcount
     temp = Symbol(name='t' + str(tempcount), stype=type, alloct='reg')
     tempcount += 1
@@ -40,9 +40,9 @@ class Type(object):
         self.size = size
         self.basetype = basetype
         self.qual_list = qualifiers
-        self.name = name if name else self.defaultName()
+        self.name = name if name else self.default_name()
 
-    def defaultName(self):
+    def default_name(self):
         n = ''
         if 'unsigned' in self.qual_list:
             n += 'u'
@@ -60,9 +60,9 @@ class ArrayType(Type):
         self.size = reduce(lambda a, b: a * b, dims) * basetype.size
         self.basetype = basetype
         self.qual_list = []
-        self.name = name if name else self.defaultName()
+        self.name = name if name else self.default_name()
 
-    def defaultName(self):
+    def default_name(self):
         return self.basetype.name + repr(self.dims)
 
 
@@ -70,11 +70,11 @@ class StructType(Type):  # currently unused
     def __init__(self, name, size, fields):
         self.name = name
         self.fields = fields
-        self.size = self.getSize()
+        self.size = self.get_size()
         self.basetype = 'Struct'
         self.qual_list = []
 
-    def getSize(self):
+    def get_size(self):
         return sum([f.size for f in self.fields])
 
 
@@ -138,7 +138,7 @@ class Symbol(object):
         self.alloct = alloct
         self.allocinfo = None
 
-    def setAllocInfo(self, allocinfo):
+    def set_alloc_info(self, allocinfo):
         self.allocinfo = allocinfo
 
     def __repr__(self):
@@ -186,12 +186,12 @@ class IRNode(object):
 
     def __repr__(self):
         try:
-            label = self.getLabel().name + ': '
+            label = self.get_label().name + ': '
         except Exception as e:
             label = ''
             pass
         try:
-            hre = self.humanRepr()
+            hre = self.human_repr()
             return label + hre
         except Exception:
             pass
@@ -260,13 +260,13 @@ class IRNode(object):
                 pass
         return False
 
-    def getFunction(self):
+    def get_function(self):
         if not self.parent:
             return 'global'
         elif type(self.parent) == FunctionDef:
             return self.parent
         else:
-            return self.parent.getFunction()
+            return self.parent.get_function()
 
 
 # CONST and VAR
@@ -280,10 +280,10 @@ class Const(IRNode):
 
     def lower(self):
         if (self.symbol == None):
-            new = newTemporary(self.symtab, standard_types['int'])
+            new = new_temporary(self.symtab, standard_types['int'])
             loadst = LoadImmStat(dest=new, val=self.value, symtab=self.symtab)
         else:
-            new = newTemporary(self.symtab, self.symbol.stype)
+            new = new_temporary(self.symtab, self.symbol.stype)
             loadst = LoadStat(dest=new, symbol=self.symbol, symtab=self.symtab)
         return self.parent.replace(self, StatList(children=[loadst], symtab=self.symtab))
 
@@ -302,7 +302,7 @@ class Var(IRNode):
     def lower(self):
         '''Var translates to a load statement to the same temporary that is used in
         a following stage for doing the computations (destination())'''
-        new = newTemporary(self.symtab, self.symbol.stype)
+        new = new_temporary(self.symtab, self.symbol.stype)
         loadst = LoadStat(dest=new, symbol=self.symbol, symtab=self.symtab)
         return self.parent.replace(self, StatList(children=[loadst], symtab=self.symtab))
 
@@ -326,14 +326,14 @@ class ArrayElement(IRNode):
 
     def lower(self):
         global standard_types
-        dest = newTemporary(self.symtab, self.symbol.stype.basetype)
+        dest = new_temporary(self.symtab, self.symbol.stype.basetype)
         off = self.offset.destination()
 
         statl = [self.offset]
 
-        ptrreg = newTemporary(self.symtab, PointerType(self.symbol.stype.basetype))
+        ptrreg = new_temporary(self.symtab, PointerType(self.symbol.stype.basetype))
         loadptr = LoadPtrToSym(dest=ptrreg, symbol=self.symbol, symtab=self.symtab)
-        src = newTemporary(self.symtab, PointerType(self.symbol.stype.basetype))
+        src = new_temporary(self.symtab, PointerType(self.symbol.stype.basetype))
         add = BinStat(dest=src, op='plus', srca=ptrreg, srcb=off, symtab=self.symtab)
         statl += [loadptr, add]
 
@@ -344,7 +344,7 @@ class ArrayElement(IRNode):
 # EXPRESSIONS
 
 class Expr(IRNode):  # ABSTRACT CLASS
-    def getOperator(self):
+    def get_operator(self):
         return self.children[0]
 
     def collect_uses(self):
@@ -358,7 +358,7 @@ class Expr(IRNode):  # ABSTRACT CLASS
 
 
 class BinExpr(Expr):
-    def getOperands(self):
+    def get_operands(self):
         return self.children[1:]
 
     def lower(self):
@@ -371,7 +371,7 @@ class BinExpr(Expr):
         else:
             desttype = Type(None, max(srca.stype.size, srcb.stype.size), 'Int')
 
-        dest = newTemporary(self.symtab, desttype)
+        dest = new_temporary(self.symtab, desttype)
 
         stmt = BinStat(dest=dest, op=self.children[0], srca=srca, srcb=srcb, symtab=self.symtab)
         statl = [self.children[1], self.children[2], stmt]
@@ -379,12 +379,12 @@ class BinExpr(Expr):
 
 
 class UnExpr(Expr):
-    def getOperand(self):
+    def get_operand(self):
         return self.children[1]
 
     def lower(self):
         src = self.children[1].destination()
-        dest = newTemporary(self.symtab, src.stype)
+        dest = new_temporary(self.symtab, src.stype)
         stmt = UnaryStat(dest=dest, op=self.children[0], src=src, symtab=self.symtab)
         statl = [self.children[1], stmt]
         return self.parent.replace(self, StatList(children=statl, symtab=self.symtab))
@@ -405,11 +405,11 @@ class CallExpr(Expr):
 
 class Stat(IRNode):
     # ABSTRACT
-    def setLabel(self, label):
+    def set_label(self, label):
         self.label = label
         label.value = self  # set target
 
-    def getLabel(self):
+    def get_label(self):
         return self.label
 
     def collect_uses(self):
@@ -451,10 +451,10 @@ class IfStat(Stat):
     def lower(self):
         exit_label = standard_types['label']()
         exit_stat = EmptyStat(self.parent, symtab=self.symtab)
-        exit_stat.setLabel(exit_label)
+        exit_stat.set_label(exit_label)
         if self.elsepart:
             then_label = standard_types['label']()
-            self.thenpart.setLabel(then_label)
+            self.thenpart.set_label(then_label)
             branch_to_then = BranchStat(None, self.cond.destination(), then_label, self.symtab)
             branch_to_exit = BranchStat(None, None, exit_label, self.symtab)
             stat_list = StatList(self.parent,
@@ -480,8 +480,8 @@ class WhileStat(Stat):
         entry_label = standard_types['label']()
         exit_label = standard_types['label']()
         exit_stat = EmptyStat(self.parent, symtab=self.symtab)
-        exit_stat.setLabel(exit_label)
-        self.cond.setLabel(entry_label)
+        exit_stat.set_label(exit_label)
+        self.cond.set_label(entry_label)
         branch = BranchStat(None, self.cond.destination(), exit_label, self.symtab, negcond=True)
         loop = BranchStat(None, None, entry_label, self.symtab)
         stat_list = StatList(self.parent, [self.cond, branch, self.body, loop, exit_stat], self.symtab)
@@ -548,9 +548,9 @@ class AssignStat(Stat):
             desttype = dst.stype
             if type(desttype) is ArrayType:  # this is always true at the moment
                 desttype = desttype.basetype
-            ptrreg = newTemporary(self.symtab, PointerType(desttype))
+            ptrreg = new_temporary(self.symtab, PointerType(desttype))
             loadptr = LoadPtrToSym(dest=ptrreg, symbol=dst, symtab=self.symtab)
-            dst = newTemporary(self.symtab, PointerType(desttype))
+            dst = new_temporary(self.symtab, PointerType(desttype))
             add = BinStat(dest=dst, op='plus', srca=ptrreg, srcb=off, symtab=self.symtab)
             stats += [self.offset, loadptr, add]
 
@@ -586,7 +586,7 @@ class PrintCommand(Stat):  # low-level node
     def collect_uses(self):
         return [self.src]
 
-    def humanRepr(self):
+    def human_repr(self):
         return 'print ' + repr(self.src)
 
 
@@ -596,7 +596,7 @@ class ReadStat(Stat):
         self.symtab = symtab
 
     def lower(self):
-        tmp = newTemporary(self.symtab, standard_types['int'])
+        tmp = new_temporary(self.symtab, standard_types['int'])
         read = ReadCommand(dest=tmp, symtab=self.symtab)
         stlist = StatList(children=[read], symtab=self.symtab)
         return self.parent.replace(self, stlist)
@@ -619,7 +619,7 @@ class ReadCommand(Stat):  # low-level node
     def collect_kills(self):
         return [self.dest]
 
-    def humanRepr(self):
+    def human_repr(self):
         return 'read ' + repr(self.dest)
 
 
@@ -648,7 +648,7 @@ class BranchStat(Stat):  # low-level node
             return True
         return False
 
-    def humanRepr(self):
+    def human_repr(self):
         if self.returns:
             h = 'call '
         else:
@@ -690,7 +690,7 @@ class LoadPtrToSym(Stat):  # low-level node
     def destination(self):
         return self.dest
 
-    def humanRepr(self):
+    def human_repr(self):
         return repr(self.dest) + ' <- &(' + repr(self.symbol) + ')'
 
 
@@ -726,7 +726,7 @@ class StoreStat(Stat):  # low-level node
     def destination(self):
         return self.dest
 
-    def humanRepr(self):
+    def human_repr(self):
         if self.dest.alloct == 'reg':
             return '[' + repr(self.dest) + '] <- ' + repr(self.symbol)
         return repr(self.dest) + ' <- ' + repr(self.symbol)
@@ -758,7 +758,7 @@ class LoadStat(Stat):  # low-level node
     def destination(self):
         return self.dest
 
-    def humanRepr(self):
+    def human_repr(self):
         if self.symbol.alloct == 'reg':
             return repr(self.dest) + ' <- [' + repr(self.symbol) + ']'
         else:
@@ -782,7 +782,7 @@ class LoadImmStat(Stat):  # low-level node
     def destination(self):
         return self.dest
 
-    def humanRepr(self):
+    def human_repr(self):
         return repr(self.dest) + ' <- ' + repr(self.val)
 
 
@@ -808,7 +808,7 @@ class BinStat(Stat):  # low-level node
     def destination(self):
         return self.dest
 
-    def humanRepr(self):
+    def human_repr(self):
         return repr(self.dest) + ' <- ' + repr(self.srca) + ' ' + self.op + ' ' + repr(self.srcb)
 
 
@@ -833,7 +833,7 @@ class UnaryStat(Stat):  # low-level node
     def destination(self):
         return self.dest
 
-    def humanRepr(self):
+    def human_repr(self):
         return repr(self.dest) + ' <- ' + self.op + ' ' + repr(self.src)
 
 
@@ -873,8 +873,8 @@ class StatList(Stat):  # low-level node
             for c in self.children:
                 c.parent = self.parent
             try:
-                label = self.getLabel()
-                self.children[0].setLabel(label)
+                label = self.get_label()
+                self.children[0].set_label(label)
             except Exception:
                 pass
             i = self.parent.children.index(self)

@@ -59,16 +59,16 @@ class RegisterAllocation(object):
         self.vartoreg.update(otherra.vartoreg)
         self.numspill += otherra.numspill
 
-    def spillRoom(self):
+    def spill_room(self):
         return self.numspill * 4
 
-    def dematerializeSpilledVarIfNecessary(self, var):
+    def dematerialize_spilled_var_if_necessary(self, var):
         '''Resets the register used for a spill variable when we know that instance
         of the variable is now dead.'''
         if self.vartoreg[var] >= self.nregs - 2:
             self.vartoreg[var] = SPILL_FLAG
 
-    def materializeSpilledVarIfNecessary(self, var):
+    def materialize_spilled_var_if_necessary(self, var):
         '''Decide which of the spill-reserved registers to fill with a spilled
         variable. Also, decides to which stack location the variable is spilled
         to, the first time this method is called for that variable.
@@ -128,7 +128,7 @@ class bb_register_allocator(object):
         self.allvars = removeNonRegs(self.allvars)
         self.allvars = list(self.allvars)
 
-    def computeLivenessIntervals(self):
+    def compute_liveness_intervals(self):
         '''Simplified one-pass liveness analysis, for a single basic block.
         It can be done in one pass because in a single basic block there are
         no branches.'''
@@ -166,7 +166,7 @@ class bb_register_allocator(object):
         '''Linear-scan register allocation (a variant of the more general
         graph coloring algorithm known as "left-edge")'''
 
-        self.computeLivenessIntervals()
+        self.compute_liveness_intervals()
 
         live = []
         freeregs = set(range(0, self.nregs - 2))  # -2 for spill room

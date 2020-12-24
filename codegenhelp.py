@@ -15,7 +15,7 @@ REGS_CALLEESAVE = [4, 5, 6, 7, 8, 9, 10]
 REGS_CALLERSAVE = [0, 1, 2, 3]
 
 
-def getRegisterString(regid):
+def get_register_string(regid):
     if regid == REG_LR:
         return 'lr'
     if regid == REG_SP:
@@ -23,26 +23,26 @@ def getRegisterString(regid):
     return 'r' + repr(regid)
 
 
-def saveRegs(reglist):
+def save_regs(reglist):
     if len(reglist) == 0:
         return ''
     res = '\tpush {'
     for i in range(0, len(reglist)):
         if i > 0:
             res += ', '
-        res += getRegisterString(reglist[i])
+        res += get_register_string(reglist[i])
     res += '}\n'
     return res
 
 
-def restoreRegs(reglist):
+def restore_regs(reglist):
     if len(reglist) == 0:
         return ''
     res = '\tpop {'
     for i in range(0, len(reglist)):
         if i > 0:
             res += ', '
-        res += getRegisterString(reglist[i])
+        res += get_register_string(reglist[i])
     res += '}\n'
     return res
 
@@ -51,7 +51,7 @@ def comment(cont):
     return '@ ' + cont + '\n'
 
 
-def codegenAppend(vec, code):
+def codegen_append(vec, code):
     if type(code) is list:
         return [vec[0] + code[0], vec[1] + code[1]]
     return [vec[0] + code, vec[1]]
@@ -60,43 +60,43 @@ def codegenAppend(vec, code):
 # class RegisterAllocation:
 
 
-def enterFunctionBody(self, block):
+def enter_function_body(self, block):
     self.curfun = block
     self.spillvarloc = dict()
     self.spillvarloctop = -block.stackroom
 
 
-def genSpillLoadIfNecessary(self, var):
-    self.dematerializeSpilledVarIfNecessary(var)
-    if not self.materializeSpilledVarIfNecessary(var):
+def gen_spill_load_if_necessary(self, var):
+    self.dematerialize_spilled_var_if_necessary(var)
+    if not self.materialize_spilled_var_if_necessary(var):
         # not a spilled variable
         return ''
     offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
-    rd = self.getRegisterForVariable(var)
-    res = '\tldr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + repr(offs) + ']'
+    rd = self.get_register_for_variable(var)
+    res = '\tldr ' + rd + ', [' + get_register_string(REG_FP) + ', #' + repr(offs) + ']'
     res += '\t' + comment('<<- fill')
     return res
 
 
-def getRegisterForVariable(self, var):
-    self.materializeSpilledVarIfNecessary(var)
-    res = getRegisterString(self.vartoreg[var])
+def get_register_for_variable(self, var):
+    self.materialize_spilled_var_if_necessary(var)
+    res = get_register_string(self.vartoreg[var])
     return res
 
 
-def genSpillStoreIfNecessary(self, var):
-    if not self.materializeSpilledVarIfNecessary(var):
+def gen_spill_store_if_necessary(self, var):
+    if not self.materialize_spilled_var_if_necessary(var):
         # not a spilled variable
         return ''
     offs = self.spillvarloctop - self.vartospillframeoffset[var] - 4
-    rd = self.getRegisterForVariable(var)
-    res = '\tstr ' + rd + ', [' + getRegisterString(REG_FP) + ', #' + repr(offs) + ']'
+    rd = self.get_register_for_variable(var)
+    res = '\tstr ' + rd + ', [' + get_register_string(REG_FP) + ', #' + repr(offs) + ']'
     res += '\t' + comment('<<- spill')
-    self.dematerializeSpilledVarIfNecessary(var)
+    self.dematerialize_spilled_var_if_necessary(var)
     return res
 
 
-RegisterAllocation.enterFunctionBody = enterFunctionBody
-RegisterAllocation.genSpillLoadIfNecessary = genSpillLoadIfNecessary
-RegisterAllocation.getRegisterForVariable = getRegisterForVariable
-RegisterAllocation.genSpillStoreIfNecessary = genSpillStoreIfNecessary
+RegisterAllocation.enter_function_body = enter_function_body
+RegisterAllocation.gen_spill_load_if_necessary = gen_spill_load_if_necessary
+RegisterAllocation.get_register_for_variable = get_register_for_variable
+RegisterAllocation.gen_spill_store_if_necessary = gen_spill_store_if_necessary

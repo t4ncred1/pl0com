@@ -48,7 +48,7 @@ def expect(s):
     return 0
 
 
-def arrayOffset(symtab):
+def array_offset(symtab):
     target = symtab.find(value)
     offset = None
     if isinstance(target.stype, ArrayType):
@@ -57,11 +57,11 @@ def arrayOffset(symtab):
             expect('lspar')
             idxes.append(expression(symtab))
             expect('rspar')
-        offset = linearizeMultidVector(idxes, target, symtab)
+        offset = linearize_multid_vector(idxes, target, symtab)
     return offset
 
 
-def linearizeMultidVector(explist, target, symtab):
+def linearize_multid_vector(explist, target, symtab):
     offset = None
     for i in range(0, len(target.stype.dims)):
         if i + 1 < len(target.stype.dims):
@@ -82,7 +82,7 @@ def linearizeMultidVector(explist, target, symtab):
 def factor(symtab):
     if accept('ident'):
         var = symtab.find(value)
-        offs = arrayOffset(symtab)
+        offs = array_offset(symtab)
         if offs is None:
             return Var(var=var, symtab=symtab)
         else:
@@ -147,7 +147,7 @@ def condition(symtab):
 def statement(symtab):
     if accept('ident'):
         target = symtab.find(value)
-        offset = arrayOffset(symtab)
+        offset = array_offset(symtab)
         expect('becomes')
         expr = expression(symtab)
         return AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
@@ -182,7 +182,7 @@ def statement(symtab):
     elif accept('read'):
         expect('ident')
         target = symtab.find(value)
-        offset = arrayOffset(symtab)
+        offset = array_offset(symtab)
         return AssignStat(target=target, offset=offset, expr=ReadStat(symtab=symtab), symtab=symtab)
 
 
@@ -293,7 +293,7 @@ if __name__ == '__main__':
     from datalayout import *
 
     print("\n\nDATALAYOUT\n\n")
-    performDataLayout(res)
+    perform_data_layout(res)
     print('\n', res, '\n')
 
     from cfg import *
