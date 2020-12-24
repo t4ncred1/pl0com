@@ -10,7 +10,7 @@ from cfg import *
 SPILL_FLAG = 999
 
 
-class minimal_register_allocator(object):
+class MinimalRegisterAllocator(object):
 
     def __init__(self, cfg, nregs):
         self.cfg = cfg
@@ -28,7 +28,7 @@ class minimal_register_allocator(object):
                     nreal.append(b)
             blockq += nreal
 
-            bbra = bb_register_allocator(blockq[i], self.nregs)
+            bbra = BBRegisterAllocator(blockq[i], self.nregs)
             thisalloc = bbra()
             print("block:", repr(id(blockq[i])))
             print("varliveness:\n", repr(bbra.varliveness))
@@ -101,7 +101,7 @@ class RegisterAllocation(object):
         return 'vartoreg = ' + repr(self.vartoreg)
 
 
-class bb_register_allocator(object):
+class BBRegisterAllocator(object):
 
     def __init__(self, bb, nregs, prevralloc=None):
         self.bb = bb

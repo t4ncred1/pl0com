@@ -48,12 +48,12 @@ def compile_program(text):
     cfg.print_cfg_to_dot("cfg.dot")
 
     print("\n\nREGALLOC\n\n")
-    ra = minimal_register_allocator(cfg, 11)
+    ra = MinimalRegisterAllocator(cfg, 11)
     reg_alloc = ra()
     print(reg_alloc)
 
     print("\n\nCODEGEN\n\n")
-    code = generateCode(res, reg_alloc)
+    code = generate_code(res, reg_alloc)
     print(code)
 
     return code

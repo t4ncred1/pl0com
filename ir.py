@@ -144,7 +144,7 @@ class Symbol(object):
     def __repr__(self):
         base = self.alloct + ' ' + self.stype.name + ' ' + self.name + \
                (self.value if type(self.value) == str else '')
-        if not self.allocinfo is None:
+        if self.allocinfo is not None:
             base = base + "; " + repr(self.allocinfo)
         return base
 
@@ -153,7 +153,8 @@ class SymbolTable(list):
     def find(self, name):
         print('Looking up', name)
         for s in self:
-            if s.name == name: return s
+            if s.name == name:
+                return s
         print('Looking up failed!')
         return None
 
@@ -196,12 +197,11 @@ class IRNode(object):
         except Exception:
             pass
 
-        attrs = set(
-            ['body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-             'global_symtab', 'local_symtab', 'offset']) & set(dir(self))
+        attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
+                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
 
         res = repr(type(self)) + ' ' + repr(id(self)) + ' {\n'
-        if self.parent != None:
+        if self.parent is not None:
             res += 'parent = ' + repr(id(self.parent)) + '\n'
         else:
             # a missing parent is not a bug only for the root node, but at this
@@ -225,9 +225,8 @@ class IRNode(object):
         return res
 
     def navigate(self, action):
-        attrs = set(
-            ['body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-             'global_symtab', 'local_symtab', 'offset']) & set(dir(self))
+        attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
+                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
         if 'children' in dir(self) and len(self.children):
             print('navigating children of', type(self), id(self), len(self.children))
             for node in self.children:
@@ -248,9 +247,8 @@ class IRNode(object):
         if 'children' in dir(self) and len(self.children) and old in self.children:
             self.children[self.children.index(old)] = new
             return True
-        attrs = set(
-            ['body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-             'global_symtab', 'local_symtab', 'offset']) & set(dir(self))
+        attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
+                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
         for d in attrs:
             try:
                 if getattr(self, d) == old:
@@ -279,7 +277,7 @@ class Const(IRNode):
         self.symtab = symtab
 
     def lower(self):
-        if (self.symbol == None):
+        if self.symbol is None:
             new = new_temporary(self.symtab, standard_types['int'])
             loadst = LoadImmStat(dest=new, val=self.value, symtab=self.symtab)
         else:
@@ -445,7 +443,8 @@ class IfStat(Stat):
         self.elsepart = elsepart
         self.cond.parent = self
         self.thenpart.parent = self
-        if self.elsepart: self.elsepart.parent = self
+        if self.elsepart:
+            self.elsepart.parent = self
         self.symtab = symtab
 
     def lower(self):
@@ -514,7 +513,7 @@ class AssignStat(Stat):
         self.expr.parent = self
         self.symtab = symtab
         self.offset = offset
-        if self.offset != None:
+        if self.offset is not None:
             self.offset.parent = self
 
     def collect_uses(self):
@@ -920,7 +919,7 @@ class FunctionDef(Definition):
         self.body = body
         self.body.parent = self
 
-    def getGlobalSymbols(self):
+    def get_global_symbols(self):
         return self.body.global_symtab.exclude([standard_types['function'], standard_types['label']])
 
 

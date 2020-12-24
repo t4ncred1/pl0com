@@ -27,11 +27,13 @@ def get_symbol_tables(root):
     def register_nodes(l):
         def r(node):
             try:
-                if node.symtab not in l: l.append(node.symtab)
+                if node.symtab not in l:
+                    l.append(node.symtab)
             except Exception:
                 pass
             try:
-                if node.lc_sym not in l: l.append(node.symtab)
+                if node.lc_sym not in l:
+                    l.append(node.symtab)
             except Exception:
                 pass
 
@@ -73,7 +75,7 @@ def dotty_wrapper(fout):
 
     def dotty_function(irnode):
         from ir import Stat
-        attrs = set(['body', 'cond', 'thenpart', 'elsepart', 'call', 'step', 'expr', 'target', 'defs']) & set(
+        attrs = {'body', 'cond', 'thenpart', 'elsepart', 'call', 'step', 'expr', 'target', 'defs'} & set(
             dir(irnode))
 
         res = repr(id(irnode)) + ' ['
@@ -118,5 +120,6 @@ def print_dotty(root, filename):
     fout.write("digraph G {\n")
     node_list = get_node_list(root)
     dotty = dotty_wrapper(fout)
-    for n in node_list: dotty(n)
+    for n in node_list:
+        dotty(n)
     fout.write("}\n")

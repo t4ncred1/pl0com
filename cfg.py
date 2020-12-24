@@ -74,7 +74,8 @@ class BasicBlock(object):
             self.live_out = reduce(lambda x, y: x.union(y), [s.live_in for s in self.succ()], set([]))
         else:  # Consider live out all the global vars
             func = self.get_function()
-            if func != 'global': self.live_out = set(func.getGlobalSymbols())
+            if func != 'global':
+                self.live_out = set(func.get_global_symbols())
         self.live_in = self.gen.union(self.live_out - self.kill)
         return not (lin == len(self.live_in) and lout == len(self.live_out))
 
@@ -103,7 +104,8 @@ def stat_list_to_bb(sl):
                 if len(newbb):
                     bb = BasicBlock(None, newbb, labels)
                     newbb = []
-                    if len(bbs): bbs[-1].next = bb
+                    if len(bbs):
+                        bbs[-1].next = bb
                     bbs.append(bb)
                     labels = [label]
                 else:
@@ -123,7 +125,8 @@ def stat_list_to_bb(sl):
 
     if len(newbb) or len(labels):
         bb = BasicBlock(None, newbb, labels)
-        if len(bbs): bbs[-1].next = bb
+        if len(bbs):
+            bbs[-1].next = bb
         bbs.append(bb)
     return bbs
 
@@ -154,7 +157,8 @@ class CFG(list):
                 if bb2.next == bb1 or bb2.target_bb == bb1:
                     head = False
                     break
-            if head: defs.append(bb1)
+            if head:
+                defs.append(bb1)
         from ir import FunctionDef
         res = {}
         for bb in defs:
@@ -172,7 +176,8 @@ class CFG(list):
         """Print the CFG in graphviz dot to file"""
         f = open(filename, "w")
         f.write("digraph G {\n")
-        for n in self: f.write(repr(n))
+        for n in self:
+            f.write(repr(n))
         h = self.heads()
         for p in h:
             bb = h[p]

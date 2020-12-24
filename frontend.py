@@ -45,7 +45,8 @@ def accept(s):
 
 def expect(s):
     print('expecting', s)
-    if accept(s): return 1
+    if accept(s):
+        return 1
     error("expect: unexpected symbol")
     return 0
 
@@ -119,7 +120,8 @@ def expression(symtab):
         getsym()
         op = sym
     expr = term(symtab)
-    if op: expr = UnExpr(children=[op, expr], symtab=symtab)
+    if op:
+        expr = UnExpr(children=[op, expr], symtab=symtab)
     while new_sym in ['plus', 'minus']:
         getsym()
         op = sym

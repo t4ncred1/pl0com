@@ -361,7 +361,7 @@ def unarystat_codegen(self, regalloc):
 UnaryStat.codegen = unarystat_codegen
 
 
-def generateCode(program, regalloc):
+def generate_code(program, regalloc):
     res = '\t.text\n'
     res += '\t.arch armv6\n'
     res += '\t.syntax unified\n'
