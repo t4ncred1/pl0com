@@ -15,6 +15,8 @@ value = None
 new_sym = None
 new_value = None
 
+the_lexer = None
+
 
 def getsym():
     '''Update sym'''
@@ -251,74 +253,12 @@ def vardef(symtab, alloct='auto'):
 
 
 @logger
-def program():
+def program(this_lexer):
     '''Axiom'''
+    global the_lexer
+    the_lexer = this_lexer
     global_symtab = SymbolTable()
     getsym()
     the_program = block(global_symtab, 'global')
     expect('period')
     return the_program
-
-
-if __name__ == '__main__':
-    from lexer import lexer, __test_program
-
-    the_lexer = lexer(__test_program)
-    res = program()
-    print('\n', res, '\n')
-
-    res.navigate(print_stat_list)
-    from support import *
-
-    node_list = get_node_list(res)
-    for n in node_list:
-        print(type(n), id(n), '->', type(n.parent), id(n.parent))
-    print('\nTotal nodes in IR:', len(node_list), '\n')
-
-    res.navigate(lowering)
-
-    node_list = get_node_list(res)
-    print('\n', res, '\n')
-    for n in node_list:
-        print(type(n), id(n))
-        try:
-            n.flatten()
-        except Exception:
-            pass
-    # res.navigate(flattening)
-    print('\n', res, '\n')
-
-    print_dotty(res, "log.dot")
-
-    from datalayout import *
-
-    print("\n\nDATALAYOUT\n\n")
-    perform_data_layout(res)
-    print('\n', res, '\n')
-
-    from cfg import *
-
-    cfg = CFG(res)
-    cfg.liveness()
-    cfg.print_liveness()
-    cfg.print_cfg_to_dot("cfg.dot")
-
-    from regalloc import *
-
-    print("\n\nREGALLOC\n\n")
-    ra = minimal_register_allocator(cfg, 11)
-    reg_alloc = ra()
-    print(reg_alloc)
-
-    from codegen import *
-
-    print("\n\nCODEGEN\n\n")
-    code = generateCode(res, reg_alloc)
-    print(code)
-
-    import sys
-
-    if len(sys.argv) == 2:
-        outf = open(sys.argv[1], 'w')
-        outf.write(code)
-        outf.close()
