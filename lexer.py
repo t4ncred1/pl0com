@@ -1,70 +1,72 @@
 #!/usr/bin/env python3
 
-__doc__='''Simple lexer for PL/0 using generators'''
+__doc__ = '''Simple lexer for PL/0 using generators'''
 
 # Tokens can have multiple definitions if needed
-symbols =  { 
-  'lparen' : ['('], 
-  'rparen' : [')'], 
-  'lspar'  : ['['],
-  'rspar'  : [']'],
-  'colon'  : [':'],
-  'times'  : ['*'], 
-  'slash'  : ['/'], 
-  'plus'   : ['+'], 
-  'minus'  : ['-'], 
-  'eql'    : ['='], 
-  'neq'    : ['!='], 
-  'lss'    : ['<'], 
-  'leq'    : ['<='],   
-  'gtr'    : ['>'], 
-  'geq'    : ['>='], 
-  'callsym': ['call'], 
-  'beginsym'  : ['begin'], 
-  'semicolon' : [';'], 
-  'endsym'    : ['end'], 
-  'ifsym'     : ['if'], 
-  'whilesym'  : ['while'], 
-  'becomes'   : [':='], 
-  'thensym'   : ['then'], 
-  'elsesym'   : ['else'],
-  'dosym'     : ['do'], 
-  'constsym'  : ['const'], 
-  'comma'     : [','], 
-  'varsym'    : ['var'], 
-  'procsym'   : ['procedure'], 
-  'period'    : ['.'], 
-  'oddsym'    : ['odd'],
-  'print'     : ['!', 'print'],
-  'read'      : ['?', 'read']
+symbols = {
+    'lparen': ['('],
+    'rparen': [')'],
+    'lspar': ['['],
+    'rspar': [']'],
+    'colon': [':'],
+    'times': ['*'],
+    'slash': ['/'],
+    'plus': ['+'],
+    'minus': ['-'],
+    'eql': ['='],
+    'neq': ['!='],
+    'lss': ['<'],
+    'leq': ['<='],
+    'gtr': ['>'],
+    'geq': ['>='],
+    'callsym': ['call'],
+    'beginsym': ['begin'],
+    'semicolon': [';'],
+    'endsym': ['end'],
+    'ifsym': ['if'],
+    'whilesym': ['while'],
+    'becomes': [':='],
+    'thensym': ['then'],
+    'elsesym': ['else'],
+    'dosym': ['do'],
+    'constsym': ['const'],
+    'comma': [','],
+    'varsym': ['var'],
+    'procsym': ['procedure'],
+    'period': ['.'],
+    'oddsym': ['odd'],
+    'print': ['!', 'print'],
+    'read': ['?', 'read']
 }
 
-def token(word):
-  '''Return corresponding token for a given word'''
-  for s in symbols : 
-    if word in symbols[s] :
-      return s
-  try : 
-    # If a terminal is not one of the standard tokens but can be converted to
-    # an integer, then it is a number, otherwise, an identifier.
-    int(word)
-    return 'number'
-  except ValueError as e :
-    return 'ident'
 
-def lexer(text) :
-  '''Generator implementation of a lexer'''
-  import re
-  t=re.sub('(\{[^\}]*\})', '', text) # remove comments in the *worst possible way*
-  t=re.split('(\W+)',t) # Split at non alphanumeric sequences
-  text=' '.join(t) # Join alphanumeric and non-alphanumeric, with spaces
-  words=[ w.strip() for w in text.lower().split() ] # Split tokens
-  for word in words :
-    yield token(word), word
+def token(word):
+    '''Return corresponding token for a given word'''
+    for s in symbols:
+        if word in symbols[s]:
+            return s
+    try:
+        # If a terminal is not one of the standard tokens but can be converted to
+        # an integer, then it is a number, otherwise, an identifier.
+        int(word)
+        return 'number'
+    except ValueError as e:
+        return 'ident'
+
+
+def lexer(text):
+    '''Generator implementation of a lexer'''
+    import re
+    t = re.sub('(\{[^\}]*\})', '', text)  # remove comments in the *worst possible way*
+    t = re.split('(\W+)', t)  # Split at non alphanumeric sequences
+    text = ' '.join(t)  # Join alphanumeric and non-alphanumeric, with spaces
+    words = [w.strip() for w in text.lower().split()]  # Split tokens
+    for word in words:
+        yield token(word), word
 
 
 # Test support
-__test_program='''VAR x, y, squ;
+__test_program = '''VAR x, y, squ;
 VAR arr[5] : char;
 var multid[5] [5] : short;
 
@@ -114,6 +116,6 @@ BEGIN
   end
 END.'''
 
-if __name__ == '__main__' :
-  for t,w in lexer(__test_program) :
-    print(t, w)
+if __name__ == '__main__':
+    for t, w in lexer(__test_program):
+        print(t, w)
