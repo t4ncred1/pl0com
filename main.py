@@ -2,7 +2,7 @@
 
 """The main function of the compiler, AKA the compiler driver"""
 
-from lexer import lexer
+from lexer import *
 from frontend import *
 from support import *
 from datalayout import *
@@ -12,8 +12,8 @@ from codegen import *
 
 
 def compile_program(text):
-    lex = lexer(text)
-    res = program(lex)
+    lex = Lexer(text)
+    res = program(lex.tokens())
     print('\n', res, '\n')
 
     res.navigate(print_stat_list)

@@ -40,38 +40,68 @@ symbols = {
 }
 
 
-def token(word):
-    """Return corresponding token for a given word"""
-    for s in symbols:
-        if word in symbols[s]:
-            return s
-    try:
-        # If a terminal is not one of the standard tokens but can be converted to
-        # an integer, then it is a number, otherwise, an identifier.
-        int(word)
-        return 'number'
-    except ValueError as e:
-        return 'ident'
+class Lexer:
+    """The lexer. Decomposes a string in tokens."""
 
+    def __init__(self, text):
+        self.text = text
+        self.pos = 0
+        self.str_to_token = list([(s, t) for t, ss in symbols.items() for s in ss])
+        self.str_to_token.sort(key=lambda a: -len(a[0]))
 
-def lexer(text):
-    """Generator implementation of a lexer"""
-    import re
-    t = re.sub('(\{[^\}]*\})', '', text)  # remove comments in the *worst possible way*
-    t = re.split('(\W+)', t)  # Split at non alphanumeric sequences
-    text = ' '.join(t)  # Join alphanumeric and non-alphanumeric, with spaces
-    words = [w.strip() for w in text.lower().split()]  # Split tokens
-    for word in words:
-        yield token(word), word
+    def skip_whitespace(self):
+        in_comment = False
+        while self.pos < len(self.text) and self.text[self.pos].isspace() or self.text[self.pos] == '{' or in_comment:
+            if self.text[self.pos] == '{' and not in_comment:
+                in_comment = True
+            elif in_comment and self.text[self.pos] == '}':
+                in_comment = False
+            self.pos += 1
+
+    def check_symbol(self):
+        for s, t in self.str_to_token:
+            if self.text[self.pos:self.pos+len(s)].lower() == s:
+                self.pos += len(s)
+                return t, s
+        return None, None
+
+    def check_regex(self, regex):
+        import re
+        match = re.match(regex, self.text[self.pos:])
+        if not match:
+            return None
+        found = match.group(0)
+        self.pos += len(found)
+        return found
+
+    def tokens(self):
+        """Returns a generator which will produce a stream of (token identifier, token value) pairs."""
+
+        while self.pos < len(self.text):
+            self.skip_whitespace()
+            t, s = self.check_symbol()
+            if s:
+                yield t, s
+                continue
+            t = self.check_regex(r'[0-9]+')
+            if t:
+                yield 'number', int(t)
+                continue
+            t = self.check_regex(r'\w+')
+            if t:
+                yield 'ident', t
+                continue
+            yield 'illegal', self.text[self.pos]
+            break
 
 
 # Test support
 __test_program = '''VAR x, y, squ;
-VAR arr[5] : char;
-var multid[5] [5] : short;
+VAR arr[5]: char;
+var multid[5][5]: short;
 
-{beware of spaces because the lexer wants them!!! }
- 
+{This is a comment. You can write anything you want in a comment}
+
 PROCEDURE square;
 VAR test;
 BEGIN
@@ -93,14 +123,14 @@ BEGIN
    WHILE x <= 10 DO
    BEGIN
       CALL square;
-      x := x + 1;
+      x:=x+1;
       !squ
    END;
    
    x := 101;
    while x <= 105 do begin
-    arr[x - 100] := x;
-    !arr[x - 100] ;
+    arr[x-100] := x;
+    !arr[x-100];
     x := x + 1
    end;
    
@@ -108,8 +138,8 @@ BEGIN
    y := 1;
    while x <= 5 do begin
     while y <= 5 do begin
-      multid[x] [y] := arr[x] ;
-      !multid[x] [y] ;
+      multid[x][y] := arr[x];
+      !multid[x][y];
       x := x + 1;
       y := y + 1
     end
@@ -117,5 +147,5 @@ BEGIN
 END.'''
 
 if __name__ == '__main__':
-    for t, w in lexer(__test_program):
+    for t, w in Lexer(__test_program).tokens():
         print(t, w)
