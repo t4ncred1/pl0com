@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-__doc__ = '''Register allocation pass, using the linear-scan algorithm.
+"""Register allocation pass, using the linear-scan algorithm.
 Assumes that all temporaries can be allocated to any register (because of this,
-it does not work with non integer types).'''
+it does not work with non integer types)."""
 
 from cfg import *
 
@@ -40,12 +40,12 @@ class MinimalRegisterAllocator(object):
 
 
 class RegisterAllocation(object):
-    '''Object that contains the information about where each temporary is
+    """Object that contains the information about where each temporary is
     allocated.
 
     Spill handling is done by reserving 2 machine registers to be filled
     as late as possible, and spilled again as soon as possible. This class is
-    responsible for filling these registers.'''
+    responsible for filling these registers."""
 
     def __init__(self, vartoreg, numspill, nregs):
         self.vartoreg = vartoreg
@@ -63,13 +63,13 @@ class RegisterAllocation(object):
         return self.numspill * 4
 
     def dematerialize_spilled_var_if_necessary(self, var):
-        '''Resets the register used for a spill variable when we know that instance
-        of the variable is now dead.'''
+        """Resets the register used for a spill variable when we know that instance
+        of the variable is now dead."""
         if self.vartoreg[var] >= self.nregs - 2:
             self.vartoreg[var] = SPILL_FLAG
 
     def materialize_spilled_var_if_necessary(self, var):
-        '''Decide which of the spill-reserved registers to fill with a spilled
+        """Decide which of the spill-reserved registers to fill with a spilled
         variable. Also, decides to which stack location the variable is spilled
         to, the first time this method is called for that variable.
 
@@ -79,7 +79,7 @@ class RegisterAllocation(object):
         The algorithm used to decide which register is filled is simple: the
         register chosen is the one that was not chosen the last time. It always
         works and it never needs any information about which registers are live
-        at a given time.'''
+        at a given time."""
 
         if self.vartoreg[var] != SPILL_FLAG:
             # already allocated and filled! nothing to do
@@ -129,9 +129,9 @@ class BBRegisterAllocator(object):
         self.allvars = list(self.allvars)
 
     def compute_liveness_intervals(self):
-        '''Simplified one-pass liveness analysis, for a single basic block.
+        """Simplified one-pass liveness analysis, for a single basic block.
         It can be done in one pass because in a single basic block there are
-        no branches.'''
+        no branches."""
         vartolasti = dict()
         livevars = set()
         i = len(self.bb.instrs) - 1
@@ -163,8 +163,8 @@ class BBRegisterAllocator(object):
                 self.varliveness.insert(0, {"var": var, "interv": lasti})
 
     def __call__(self):
-        '''Linear-scan register allocation (a variant of the more general
-        graph coloring algorithm known as "left-edge")'''
+        """Linear-scan register allocation (a variant of the more general
+        graph coloring algorithm known as "left-edge")"""
 
         self.compute_liveness_intervals()
 

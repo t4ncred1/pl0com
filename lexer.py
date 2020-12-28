@@ -3,7 +3,7 @@
 """Simple lexer for PL/0 using generators"""
 
 # Tokens can have multiple definitions if needed
-symbols = {
+TOKEN_DEFS = {
     'lparen': ['('],
     'rparen': [')'],
     'lspar': ['['],
@@ -46,7 +46,7 @@ class Lexer:
     def __init__(self, text):
         self.text = text
         self.pos = 0
-        self.str_to_token = list([(s, t) for t, ss in symbols.items() for s in ss])
+        self.str_to_token = list([(s, t) for t, ss in TOKEN_DEFS.items() for s in ss])
         self.str_to_token.sort(key=lambda a: -len(a[0]))
 
     def skip_whitespace(self):
