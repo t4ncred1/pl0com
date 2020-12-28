@@ -3,7 +3,7 @@
 """The main function of the compiler, AKA the compiler driver"""
 
 import lexer
-import frontend
+import parser
 from support import *
 from datalayout import *
 from cfg import *
@@ -13,7 +13,7 @@ from codegen import *
 
 def compile_program(text):
     lex = lexer.Lexer(text)
-    pars = frontend.Parser(lex)
+    pars = parser.Parser(lex)
     res = pars.program()
     print('\n', res, '\n')
 
