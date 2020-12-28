@@ -31,8 +31,8 @@ def new_temporary(symtab, type):
 # register is provided.
 
 
-basetypes = ['Int', 'Label', 'Struct', 'Function']
-qualifiers = ['unsigned']
+BASE_TYPES = ['Int', 'Label', 'Struct', 'Function']
+TYPE_QUALIFIERS = ['unsigned']
 
 
 class Type(object):
@@ -109,7 +109,7 @@ class PointerType(Type):
         self.pointstotype = ptrto
 
 
-standard_types = {
+TYPENAMES = {
     'int': Type('int', 32, 'Int'),
     'short': Type('short', 16, 'Int'),
     'char': Type('char', 8, 'Int'),
@@ -121,7 +121,7 @@ standard_types = {
     'function': FunctionType(),
 }
 
-alloctype = ['global', 'auto', 'reg', 'imm']
+ALLOC_CLASSES = ['global', 'auto', 'reg', 'imm']
 
 
 class Symbol(object):
@@ -278,7 +278,7 @@ class Const(IRNode):
 
     def lower(self):
         if self.symbol is None:
-            new = new_temporary(self.symtab, standard_types['int'])
+            new = new_temporary(self.symtab, TYPENAMES['int'])
             loadst = LoadImmStat(dest=new, val=self.value, symtab=self.symtab)
         else:
             new = new_temporary(self.symtab, self.symbol.stype)
@@ -323,7 +323,7 @@ class ArrayElement(IRNode):
         return a
 
     def lower(self):
-        global standard_types
+        global TYPENAMES
         dest = new_temporary(self.symtab, self.symbol.stype.basetype)
         off = self.offset.destination()
 
@@ -427,7 +427,7 @@ class CallStat(Stat):
         self.symtab = symtab
 
     def collect_uses(self):
-        return self.call.collect_uses() + self.symtab.exclude([standard_types['function'], standard_types['label']])
+        return self.call.collect_uses() + self.symtab.exclude([TYPENAMES['function'], TYPENAMES['label']])
 
     def lower(self):
         dest = self.call.symbol
@@ -448,11 +448,11 @@ class IfStat(Stat):
         self.symtab = symtab
 
     def lower(self):
-        exit_label = standard_types['label']()
+        exit_label = TYPENAMES['label']()
         exit_stat = EmptyStat(self.parent, symtab=self.symtab)
         exit_stat.set_label(exit_label)
         if self.elsepart:
-            then_label = standard_types['label']()
+            then_label = TYPENAMES['label']()
             self.thenpart.set_label(then_label)
             branch_to_then = BranchStat(None, self.cond.destination(), then_label, self.symtab)
             branch_to_exit = BranchStat(None, None, exit_label, self.symtab)
@@ -476,8 +476,8 @@ class WhileStat(Stat):
         self.symtab = symtab
 
     def lower(self):
-        entry_label = standard_types['label']()
-        exit_label = standard_types['label']()
+        entry_label = TYPENAMES['label']()
+        exit_label = TYPENAMES['label']()
         exit_stat = EmptyStat(self.parent, symtab=self.symtab)
         exit_stat.set_label(exit_label)
         self.cond.set_label(entry_label)
@@ -595,7 +595,7 @@ class ReadStat(Stat):
         self.symtab = symtab
 
     def lower(self):
-        tmp = new_temporary(self.symtab, standard_types['int'])
+        tmp = new_temporary(self.symtab, TYPENAMES['int'])
         read = ReadCommand(dest=tmp, symtab=self.symtab)
         stlist = StatList(children=[read], symtab=self.symtab)
         return self.parent.replace(self, stlist)
@@ -920,7 +920,7 @@ class FunctionDef(Definition):
         self.body.parent = self
 
     def get_global_symbols(self):
-        return self.body.global_symtab.exclude([standard_types['function'], standard_types['label']])
+        return self.body.global_symtab.exclude([TYPENAMES['function'], TYPENAMES['label']])
 
 
 class DefinitionList(IRNode):

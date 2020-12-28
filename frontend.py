@@ -2,265 +2,242 @@
 
 """PL/0 recursive descent parser adapted from Wikipedia"""
 
-from ir import *
+import ir
 from logger import logger
-
-symbols = ['ident', 'number', 'lparen', 'rparen', 'times', 'slash', 'plus',
-           'minus', 'eql', 'neq', 'lss', 'leq', 'gtr', 'geq', 'callsym', 'beginsym',
-           'semicolon', 'endsym', 'ifsym', 'whilesym', 'becomes', 'thensym', 'dosym',
-           'constsym', 'comma', 'varsym', 'procsym', 'period', 'oddsym']
-
-sym = None
-value = None
-new_sym = None
-new_value = None
-
-the_lexer = None
+from functools import reduce
 
 
-def getsym():
-    """Update sym"""
-    global new_sym
-    global new_value
-    global sym
-    global value
-    try:
-        sym = new_sym
-        value = new_value
-        new_sym, new_value = next(the_lexer)
-    except StopIteration:
-        return 2
-    print('getsym:', new_sym, new_value)
-    return 1
+class Parser:
+    def __init__(self, the_lexer):
+        self.sym = None
+        self.value = None
+        self.new_sym = None
+        self.new_value = None
+        self.the_lexer = the_lexer.tokens()
 
-
-def error(msg):
-    print('\033[31m', msg, new_sym, new_value, '\033[39m')
-
-
-def accept(s):
-    print('accepting', s, '==', new_sym)
-    return getsym() if new_sym == s else 0
-
-
-def expect(s):
-    print('expecting', s)
-    if accept(s):
+    def getsym(self):
+        """Update sym"""
+        try:
+            self.sym = self.new_sym
+            self.value = self.new_value
+            self.new_sym, self.new_value = next(self.the_lexer)
+        except StopIteration:
+            return 2
+        print('getsym:', self.new_sym, self.new_value)
         return 1
-    error("expect: unexpected symbol")
-    return 0
 
+    def error(self, msg):
+        print('\033[31m', msg, self.new_sym, self.new_value, '\033[39m')
 
-def array_offset(symtab):
-    target = symtab.find(value)
-    offset = None
-    if isinstance(target.stype, ArrayType):
-        idxes = []
+    def accept(self, s):
+        print('accepting', s, '==', self.new_sym)
+        return self.getsym() if self.new_sym == s else 0
+
+    def expect(self, s):
+        print('expecting', s)
+        if self.accept(s):
+            return 1
+        self.error("expect: unexpected symbol")
+        return 0
+
+    def array_offset(self, symtab):
+        target = symtab.find(self.value)
+        offset = None
+        if isinstance(target.stype, ir.ArrayType):
+            idxes = []
+            for i in range(0, len(target.stype.dims)):
+                self.expect('lspar')
+                idxes.append(self.expression(symtab))
+                self.expect('rspar')
+            offset = self.linearize_multid_vector(idxes, target, symtab)
+        return offset
+
+    @staticmethod
+    def linearize_multid_vector(explist, target, symtab):
+        offset = None
         for i in range(0, len(target.stype.dims)):
-            expect('lspar')
-            idxes.append(expression(symtab))
-            expect('rspar')
-        offset = linearize_multid_vector(idxes, target, symtab)
-    return offset
+            if i + 1 < len(target.stype.dims):
+                planedisp = reduce(lambda x, y: x * y, target.stype.dims[i + 1:])
+            else:
+                planedisp = 1
+            idx = explist[i]
+            esize = (target.stype.basetype.size // 8) * planedisp
+            planed = ir.BinExpr(children=['times', idx, ir.Const(value=esize, symtab=symtab)], symtab=symtab)
+            if offset is None:
+                offset = planed
+            else:
+                offset = ir.BinExpr(children=['plus', offset, planed], symtab=symtab)
+        return offset
 
-
-def linearize_multid_vector(explist, target, symtab):
-    offset = None
-    for i in range(0, len(target.stype.dims)):
-        if i + 1 < len(target.stype.dims):
-            planedisp = reduce(lambda x, y: x * y, target.stype.dims[i + 1:])
+    @logger
+    def factor(self, symtab):
+        if self.accept('ident'):
+            var = symtab.find(self.value)
+            offs = self.array_offset(symtab)
+            if offs is None:
+                return ir.Var(var=var, symtab=symtab)
+            else:
+                return ir.ArrayElement(var=var, offset=offs, symtab=symtab)
+        if self.accept('number'):
+            return ir.Const(value=int(self.value), symtab=symtab)
+        elif self.accept('lparen'):
+            expr = self.expression()
+            self.expect('rparen')
+            return expr
         else:
-            planedisp = 1
-        idx = explist[i]
-        esize = (target.stype.basetype.size // 8) * planedisp
-        planed = BinExpr(children=['times', idx, Const(value=esize, symtab=symtab)], symtab=symtab)
-        if offset == None:
-            offset = planed
-        else:
-            offset = BinExpr(children=['plus', offset, planed], symtab=symtab)
-    return offset
+            self.error("factor: syntax error")
+            self.getsym()
 
-
-@logger
-def factor(symtab):
-    if accept('ident'):
-        var = symtab.find(value)
-        offs = array_offset(symtab)
-        if offs is None:
-            return Var(var=var, symtab=symtab)
-        else:
-            return ArrayElement(var=var, offset=offs, symtab=symtab)
-    if accept('number'):
-        return Const(value=int(value), symtab=symtab)
-    elif accept('lparen'):
-        expr = expression()
-        expect('rparen')
+    @logger
+    def term(self, symtab):
+        expr = self.factor(symtab)
+        while self.new_sym in ['times', 'slash']:
+            self.getsym()
+            op = self.sym
+            expr2 = self.factor(symtab)
+            expr = ir.BinExpr(children=[op, expr, expr2], symtab=symtab)
         return expr
-    else:
-        error("factor: syntax error")
-        getsym()
 
+    @logger
+    def expression(self, symtab):
+        op = None
+        if self.new_sym in ['plus', 'minus']:
+            self.getsym()
+            op = self.sym
+        expr = self.term(symtab)
+        if op:
+            expr = ir.UnExpr(children=[op, expr], symtab=symtab)
+        while self.new_sym in ['plus', 'minus']:
+            self.getsym()
+            op = self.sym
+            expr2 = self.term(symtab)
+            expr = ir.BinExpr(children=[op, expr, expr2], symtab=symtab)
+        return expr
 
-@logger
-def term(symtab):
-    op = None
-    expr = factor(symtab)
-    while new_sym in ['times', 'slash']:
-        getsym()
-        op = sym
-        expr2 = factor(symtab)
-        expr = BinExpr(children=[op, expr, expr2], symtab=symtab)
-    return expr
-
-
-@logger
-def expression(symtab):
-    op = None
-    if new_sym in ['plus', 'minus']:
-        getsym()
-        op = sym
-    expr = term(symtab)
-    if op:
-        expr = UnExpr(children=[op, expr], symtab=symtab)
-    while new_sym in ['plus', 'minus']:
-        getsym()
-        op = sym
-        expr2 = term(symtab)
-        expr = BinExpr(children=[op, expr, expr2], symtab=symtab)
-    return expr
-
-
-@logger
-def condition(symtab):
-    if accept('oddsym'):
-        return UnExpr(children=['odd', expression(symtab)], symtab=symtab)
-    else:
-        expr = expression(symtab)
-        if new_sym in ['eql', 'neq', 'lss', 'leq', 'gtr', 'geq']:
-            getsym()
-            print('condition operator', sym, new_sym)
-            op = sym
-            expr2 = expression(symtab)
-            return BinExpr(children=[op, expr, expr2], symtab=symtab)
+    @logger
+    def condition(self, symtab):
+        if self.accept('oddsym'):
+            return ir.UnExpr(children=['odd', self.expression(symtab)], symtab=symtab)
         else:
-            error("condition: invalid operator")
-            getsym()
+            expr = self.expression(symtab)
+            if self.new_sym in ['eql', 'neq', 'lss', 'leq', 'gtr', 'geq']:
+                self.getsym()
+                print('condition operator', self.sym, self.new_sym)
+                op = self.sym
+                expr2 = self.expression(symtab)
+                return ir.BinExpr(children=[op, expr, expr2], symtab=symtab)
+            else:
+                self.error("condition: invalid operator")
+                self.getsym()
 
+    @logger
+    def statement(self, symtab):
+        if self.accept('ident'):
+            target = symtab.find(self.value)
+            offset = self.array_offset(symtab)
+            self.expect('becomes')
+            expr = self.expression(symtab)
+            return ir.AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
 
-@logger
-def statement(symtab):
-    if accept('ident'):
-        target = symtab.find(value)
-        offset = array_offset(symtab)
-        expect('becomes')
-        expr = expression(symtab)
-        return AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
+        elif self.accept('callsym'):
+            self.expect('ident')
+            return ir.CallStat(call_expr=ir.CallExpr(function=symtab.find(self.value), symtab=symtab), symtab=symtab)
+        elif self.accept('beginsym'):
+            statement_list = ir.StatList(symtab=symtab)
+            statement_list.append(self.statement(symtab))
+            while self.accept('semicolon'):
+                statement_list.append(self.statement(symtab))
+            self.expect('endsym')
+            statement_list.print_content()
+            return statement_list
+        elif self.accept('ifsym'):
+            cond = self.condition(symtab)
+            self.expect('thensym')
+            then = self.statement(symtab)
+            els = None
+            if self.accept('elsesym'):
+                els = self.statement(symtab)
+            return ir.IfStat(cond=cond, thenpart=then, elsepart=els, symtab=symtab)
+        elif self.accept('whilesym'):
+            cond = self.condition(symtab)
+            self.expect('dosym')
+            body = self.statement(symtab)
+            return ir.WhileStat(cond=cond, body=body, symtab=symtab)
+        elif self.accept('print'):
+            exp = self.expression(symtab)
+            return ir.PrintStat(exp=exp, symtab=symtab)
+        elif self.accept('read'):
+            self.expect('ident')
+            target = symtab.find(self.value)
+            offset = self.array_offset(symtab)
+            return ir.AssignStat(target=target, offset=offset, expr=ir.ReadStat(symtab=symtab), symtab=symtab)
 
-    elif accept('callsym'):
-        expect('ident')
-        return CallStat(call_expr=CallExpr(function=symtab.find(value), symtab=symtab), symtab=symtab)
-    elif accept('beginsym'):
-        statement_list = StatList(symtab=symtab)
-        statement_list.append(statement(symtab))
-        while accept('semicolon'):
-            statement_list.append(statement(symtab))
-        expect('endsym')
-        statement_list.print_content()
-        return statement_list
-    elif accept('ifsym'):
-        cond = condition(symtab)
-        expect('thensym')
-        then = statement(symtab)
-        els = None
-        if accept('elsesym'):
-            els = statement(symtab)
-        return IfStat(cond=cond, thenpart=then, elsepart=els, symtab=symtab)
-    elif accept('whilesym'):
-        cond = condition(symtab)
-        expect('dosym')
-        body = statement(symtab)
-        return WhileStat(cond=cond, body=body, symtab=symtab)
-    elif accept('print'):
-        exp = expression(symtab)
-        return PrintStat(exp=exp, symtab=symtab)
-    elif accept('read'):
-        expect('ident')
-        target = symtab.find(value)
-        offset = array_offset(symtab)
-        return AssignStat(target=target, offset=offset, expr=ReadStat(symtab=symtab), symtab=symtab)
+    @logger
+    def block(self, symtab, alloct='auto'):
+        local_vars = ir.SymbolTable()
+        defs = ir.DefinitionList()
 
+        while self.accept('constsym') or self.accept('varsym'):
+            if self.sym == 'constsym':
+                self.constdef(local_vars, alloct)
+                while self.accept('comma'):
+                    self.constdef(local_vars, alloct)
+            else:
+                self.vardef(local_vars, alloct)
+                while self.accept('comma'):
+                    self.vardef(local_vars, alloct)
+            self.expect('semicolon')
 
-@logger
-def block(symtab, alloct='auto'):
-    local_vars = SymbolTable()
-    defs = DefinitionList()
+        while self.accept('procsym'):
+            self.expect('ident')
+            fname = self.value
+            self.expect('semicolon')
+            local_vars.append(ir.Symbol(fname, ir.TYPENAMES['function']))
+            fbody = self.block(local_vars)
+            self.expect('semicolon')
+            defs.append(ir.FunctionDef(symbol=local_vars.find(fname), body=fbody))
+        stat = self.statement(ir.SymbolTable(symtab[:] + local_vars))
+        return ir.Block(gl_sym=symtab, lc_sym=local_vars, defs=defs, body=stat)
 
-    while accept('constsym') or accept('varsym'):
-        if (sym == 'constsym'):
-            constdef(local_vars, alloct)
-            while accept('comma'):
-                constdef(local_vars, alloct)
+    @logger
+    def constdef(self, local_vars, alloct='auto'):
+        self.expect('ident')
+        name = self.value
+        self.expect('eql')
+        self.expect('number')
+        local_vars.append(ir.Symbol(name, ir.TYPENAMES['int'], alloct=alloct), int(self.value))
+        while self.accept('comma'):
+            self.expect('ident')
+            name = self.value
+            self.expect('eql')
+            self.expect('number')
+            local_vars.append(ir.Symbol(name, ir.TYPENAMES['int'], alloct=alloct), int(self.value))
+
+    @logger
+    def vardef(self, symtab, alloct='auto'):
+        self.expect('ident')
+        name = self.value
+        size = []
+        while self.accept('lspar'):
+            self.expect('number')
+            size.append(int(self.value))
+            self.expect('rspar')
+
+        type = ir.TYPENAMES['int']
+        if self.accept('colon'):
+            self.accept('ident')
+            type = ir.TYPENAMES[self.value]
+
+        if len(size) > 0:
+            symtab.append(ir.Symbol(name, ir.ArrayType(None, size, type), alloct=alloct))
         else:
-            vardef(local_vars, alloct)
-            while accept('comma'):
-                vardef(local_vars, alloct)
-        expect('semicolon')
+            symtab.append(ir.Symbol(name, type, alloct=alloct))
 
-    while accept('procsym'):
-        expect('ident')
-        fname = value
-        expect('semicolon')
-        local_vars.append(Symbol(fname, standard_types['function']))
-        fbody = block(local_vars)
-        expect('semicolon')
-        defs.append(FunctionDef(symbol=local_vars.find(fname), body=fbody))
-    stat = statement(SymbolTable(symtab[:] + local_vars))
-    return Block(gl_sym=symtab, lc_sym=local_vars, defs=defs, body=stat)
-
-
-@logger
-def constdef(local_vars, alloct='auto'):
-    expect('ident')
-    name = value
-    expect('eql')
-    expect('number')
-    local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), int(value))
-    while accept('comma'):
-        expect('ident')
-        name = value
-        expect('eql')
-        expect('number')
-        local_vars.append(Symbol(name, standard_types['int'], alloct=alloct), int(value))
-
-
-@logger
-def vardef(symtab, alloct='auto'):
-    expect('ident')
-    name = value
-    size = []
-    while accept('lspar'):
-        expect('number')
-        size.append(int(value))
-        expect('rspar')
-
-    type = standard_types['int']
-    if accept('colon'):
-        accept('ident')
-        type = standard_types[value]
-
-    if len(size) > 0:
-        symtab.append(Symbol(name, ArrayType(None, size, type), alloct=alloct))
-    else:
-        symtab.append(Symbol(name, type, alloct=alloct))
-
-
-@logger
-def program(this_lexer):
-    """Axiom"""
-    global the_lexer
-    the_lexer = this_lexer
-    global_symtab = SymbolTable()
-    getsym()
-    the_program = block(global_symtab, 'global')
-    expect('period')
-    return the_program
+    @logger
+    def program(self):
+        """Axiom"""
+        global_symtab = ir.SymbolTable()
+        self.getsym()
+        the_program = self.block(global_symtab, 'global')
+        self.expect('period')
+        return the_program
