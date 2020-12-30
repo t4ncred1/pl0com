@@ -40,7 +40,7 @@ def perform_data_layout(root):
 def perform_data_layout_of_function(funcroot):
     offs = 0  # prev fp
     prefix = "_l_" + funcroot.symbol.name + "_"
-    for var in funcroot.body.local_symtab:
+    for var in funcroot.body.symtab:
         if var.stype.size == 0:
             continue
         bsize = var.stype.size // 8
@@ -51,7 +51,7 @@ def perform_data_layout_of_function(funcroot):
 
 def perform_data_layout_of_program(root):
     prefix = "_g_"
-    for var in root.local_symtab:
+    for var in root.symtab:
         if var.stype.size == 0:
             continue
         var.set_alloc_info(GlobalSymbolLayout(prefix + var.name, var.stype.size // 8))

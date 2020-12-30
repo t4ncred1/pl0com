@@ -35,8 +35,10 @@ BASE_TYPES = ['Int', 'Label', 'Struct', 'Function']
 TYPE_QUALIFIERS = ['unsigned']
 
 
-class Type(object):
-    def __init__(self, name, size, basetype, qualifiers=[]):
+class Type:
+    def __init__(self, name, size, basetype, qualifiers=None):
+        if qualifiers is None:
+            qualifiers = []
         self.size = size
         self.basetype = basetype
         self.qual_list = qualifiers
@@ -57,9 +59,7 @@ class ArrayType(Type):
         """dims is a list of dimensions: dims = [5]: array of 5 elements;
         dims = [5, 5]: 5x5 matrix; and so on"""
         self.dims = dims
-        self.size = reduce(lambda a, b: a * b, dims) * basetype.size
-        self.basetype = basetype
-        self.qual_list = []
+        super().__init__(name, reduce(lambda a, b: a * b, dims) * basetype.size, basetype)
         self.name = name if name else self.default_name()
 
     def default_name(self):
@@ -68,11 +68,9 @@ class ArrayType(Type):
 
 class StructType(Type):  # currently unused
     def __init__(self, name, size, fields):
-        self.name = name
         self.fields = fields
-        self.size = self.get_size()
-        self.basetype = 'Struct'
-        self.qual_list = []
+        realsize = sum([f.size for f in self.fields])
+        super().__init__(name, realsize, 'Struct', [])
 
     def get_size(self):
         return sum([f.size for f in self.fields])
@@ -80,10 +78,7 @@ class StructType(Type):  # currently unused
 
 class LabelType(Type):
     def __init__(self):
-        self.name = 'label'
-        self.size = 0
-        self.basetype = 'Label'
-        self.qual_list = []
+        super().__init__('label', 0, 'Label', [])
         self.ids = 0
 
     def __call__(self, target=None):
@@ -93,19 +88,13 @@ class LabelType(Type):
 
 class FunctionType(Type):
     def __init__(self):
-        self.name = 'function'
-        self.size = 0
-        self.basetype = 'Function'
-        self.qual_list = []
+        super().__init__('function', 0, 'Function', [])
 
 
 class PointerType(Type):
     def __init__(self, ptrto):
         """ptrto is the type of the object that this pointer points to."""
-        self.name = '&' + ptrto.name
-        self.size = 32
-        self.basetype = 'Int'
-        self.qual_list = ['unsigned']
+        super().__init__('&' + ptrto.name, 32, 'Int', ['unsigned'])
         self.pointstotype = ptrto
 
 
@@ -124,7 +113,7 @@ TYPENAMES = {
 ALLOC_CLASSES = ['global', 'auto', 'reg', 'imm']
 
 
-class Symbol(object):
+class Symbol:
     """There are 4 classes of allocation for symbols:\n
     - allocation to a register ('reg')
     - allocation to an arbitrary memory location, in the current stack frame
@@ -170,12 +159,11 @@ class SymbolTable(list):
 
 # IRNODE
 
-class IRNode(object):
-
+class IRNode:  # abstract
     def __init__(self, parent=None, children=None, symtab=None):
         self.parent = parent
         if children:
-            self.children = children
+            self.children = children[:]
             for c in self.children:
                 try:
                     c.parent = self
@@ -188,7 +176,7 @@ class IRNode(object):
     def __repr__(self):
         try:
             label = self.get_label().name + ': '
-        except Exception as e:
+        except Exception:
             label = ''
             pass
         try:
@@ -266,15 +254,20 @@ class IRNode(object):
         else:
             return self.parent.get_function()
 
+    def get_label(self):
+        raise NotImplementedError
+
+    def human_repr(self):
+        raise NotImplementedError
+
 
 # CONST and VAR
 
 class Const(IRNode):
     def __init__(self, parent=None, value=0, symb=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, None, symtab)
         self.value = value
         self.symbol = symb
-        self.symtab = symtab
 
     def lower(self):
         if self.symbol is None:
@@ -290,9 +283,8 @@ class Var(IRNode):
     """loads in a temporary the value pointed to by the symbol"""
 
     def __init__(self, parent=None, var=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, None, symtab)
         self.symbol = var
-        self.symtab = symtab
 
     def collect_uses(self):
         return [self.symbol]
@@ -311,11 +303,9 @@ class ArrayElement(IRNode):
     def __init__(self, parent=None, var=None, offset=None, symtab=None):
         """offset can NOT be a list of exps in case of multi-d arrays; it should
         have already been flattened beforehand"""
-        self.parent = parent
+        super().__init__(parent, [offset], symtab)
         self.symbol = var
-        self.symtab = symtab
         self.offset = offset
-        self.offset.parent = self
 
     def collect_uses(self):
         a = [self.symbol]
@@ -341,7 +331,7 @@ class ArrayElement(IRNode):
 
 # EXPRESSIONS
 
-class Expr(IRNode):  # ABSTRACT CLASS
+class Expr(IRNode):  # abstract
     def get_operator(self):
         return self.children[0]
 
@@ -390,7 +380,7 @@ class UnExpr(Expr):
 
 class CallExpr(Expr):
     def __init__(self, parent=None, function=None, parameters=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.symbol = function
         # parameters are ignored
         if parameters:
@@ -401,8 +391,11 @@ class CallExpr(Expr):
 
 # STATEMENTS
 
-class Stat(IRNode):
-    # ABSTRACT
+class Stat(IRNode):  # abstract
+    def __init__(self, parent=None, children=None, symtab=None):
+        super().__init__(parent, children, symtab)
+        self.label = None
+
     def set_label(self, label):
         self.label = label
         label.value = self  # set target
@@ -421,10 +414,9 @@ class CallStat(Stat):
     """Procedure call"""
 
     def __init__(self, parent=None, call_expr=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.call = call_expr
         self.call.parent = self
-        self.symtab = symtab
 
     def collect_uses(self):
         return self.call.collect_uses() + self.symtab.exclude([TYPENAMES['function'], TYPENAMES['label']])
@@ -437,7 +429,7 @@ class CallStat(Stat):
 
 class IfStat(Stat):
     def __init__(self, parent=None, cond=None, thenpart=None, elsepart=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.cond = cond
         self.thenpart = thenpart
         self.elsepart = elsepart
@@ -445,7 +437,6 @@ class IfStat(Stat):
         self.thenpart.parent = self
         if self.elsepart:
             self.elsepart.parent = self
-        self.symtab = symtab
 
     def lower(self):
         exit_label = TYPENAMES['label']()
@@ -468,12 +459,11 @@ class IfStat(Stat):
 
 class WhileStat(Stat):
     def __init__(self, parent=None, cond=None, body=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.cond = cond
         self.body = body
         self.cond.parent = self
         self.body.parent = self
-        self.symtab = symtab
 
     def lower(self):
         entry_label = TYPENAMES['label']()
@@ -489,21 +479,20 @@ class WhileStat(Stat):
 
 class ForStat(Stat):  # incomplete
     def __init__(self, parent=None, init=None, cond=None, step=None, body=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.init = init
         self.cond = cond
         self.step = step
         self.body = body
+        self.init.parent = self
         self.cond.parent = self
-        self.body.parent = self
-        self.target.parent = self
         self.step.parent = self
-        self.symtab = symtab
+        self.body.parent = self
 
 
 class AssignStat(Stat):
     def __init__(self, parent=None, target=None, offset=None, expr=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.symbol = target
         try:
             self.symbol.parent = self
@@ -511,7 +500,6 @@ class AssignStat(Stat):
             pass
         self.expr = expr
         self.expr.parent = self
-        self.symtab = symtab
         self.offset = offset
         if self.offset is not None:
             self.offset.parent = self
@@ -560,10 +548,8 @@ class AssignStat(Stat):
 
 class PrintStat(Stat):
     def __init__(self, parent=None, exp=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [exp], symtab)
         self.expr = exp
-        self.symtab = symtab
-        exp.parent = self
 
     def collect_uses(self):
         return self.expr.collect_uses()
@@ -576,11 +562,10 @@ class PrintStat(Stat):
 
 class PrintCommand(Stat):  # low-level node
     def __init__(self, parent=None, src=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.src = src
         if src.alloct != 'reg':
             raise RuntimeError('value not in register')
-        self.symtab = symtab
 
     def collect_uses(self):
         return [self.src]
@@ -591,8 +576,7 @@ class PrintCommand(Stat):  # low-level node
 
 class ReadStat(Stat):
     def __init__(self, parent=None, symtab=None):
-        self.parent = parent
-        self.symtab = symtab
+        super().__init__(parent, [], symtab)
 
     def lower(self):
         tmp = new_temporary(self.symtab, TYPENAMES['int'])
@@ -603,11 +587,10 @@ class ReadStat(Stat):
 
 class ReadCommand(Stat):  # low-level node
     def __init__(self, parent=None, dest=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.dest = dest
         if dest.alloct != 'reg':
             raise RuntimeError('read not to register')
-        self.symtab = symtab
 
     def destination(self):
         return self.dest
@@ -628,13 +611,12 @@ class BranchStat(Stat):  # low-level node
         If negcond is True and Cond != None, the branch is taken when cond is false,
         otherwise the branch is taken when cond is true.
         If returns is True, this is a branch-and-link instruction."""
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.cond = cond
         self.negcond = negcond
         if not (self.cond is None) and self.cond.alloct != 'reg':
             raise RuntimeError('condition not in register')
         self.target = target
-        self.symtab = symtab
         self.returns = returns
 
     def collect_uses(self):
@@ -671,9 +653,8 @@ class LoadPtrToSym(Stat):  # low-level node
         """Loads to the 'dest' symbol the location in memory (as an absolute
         address) of 'symbol'. This instruction is used as a starting point for
         lowering nodes which need any kind of pointer arithmetic."""
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.symbol = symbol
-        self.symtab = symtab
         self.dest = dest
         if self.symbol.alloct == 'reg':
             raise RuntimeError('symbol not in memory')
@@ -701,11 +682,10 @@ class StoreStat(Stat):  # low-level node
         register). In the first case, the store is done to the symbol itself; in
         the second case the dest symbol is used as a pointer to an arbitrary
         location in memory."""
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.symbol = symbol
         if self.symbol.alloct != 'reg':
             raise RuntimeError('store not from register')
-        self.symtab = symtab
         self.dest = dest
         self.killhint = killhint
 
@@ -738,9 +718,8 @@ class LoadStat(Stat):  # low-level node
         register). In the first case, the value contained in the symbol itself is
         loaded; in the second case the symbol is used as a pointer to an arbitrary
         location in memory."""
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.symbol = symbol
-        self.symtab = symtab
         self.dest = dest
         self.usehint = usehint
         if self.dest.alloct != 'reg':
@@ -766,7 +745,7 @@ class LoadStat(Stat):  # low-level node
 
 class LoadImmStat(Stat):  # low-level node
     def __init__(self, parent=None, dest=None, val=0, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.val = val
         self.dest = dest
         if self.dest.alloct != 'reg':
@@ -787,7 +766,7 @@ class LoadImmStat(Stat):  # low-level node
 
 class BinStat(Stat):  # low-level node
     def __init__(self, parent=None, dest=None, op=None, srca=None, srcb=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.dest = dest  # symbol
         self.op = op
         self.srca = srca  # symbol
@@ -796,7 +775,6 @@ class BinStat(Stat):  # low-level node
             raise RuntimeError('binstat dest not to register')
         if self.srca.alloct != 'reg' or self.srcb.alloct != 'reg':
             raise RuntimeError('binstat src not in register')
-        self.symtab = symtab
 
     def collect_kills(self):
         return [self.dest]
@@ -813,11 +791,10 @@ class BinStat(Stat):  # low-level node
 
 class UnaryStat(Stat):  # low-level node
     def __init__(self, parent=None, dest=None, op=None, src=None, symtab=None):
-        self.parent = parent
+        super().__init__(parent, [], symtab)
         self.dest = dest
         self.op = op
         self.src = src
-        self.symtab = symtab
         if self.dest.alloct != 'reg':
             raise RuntimeError('unarystat dest not to register')
         if self.src.alloct != 'reg':
@@ -839,14 +816,7 @@ class UnaryStat(Stat):  # low-level node
 class StatList(Stat):  # low-level node
     def __init__(self, parent=None, children=None, symtab=None):
         print('StatList : new', id(self))
-        self.parent = parent
-        if children:
-            self.children = children[:]
-            for c in self.children:
-                c.parent = self
-        else:
-            self.children = []
-        self.symtab = symtab
+        super().__init__(parent, children, symtab)
 
     def append(self, elem):
         elem.parent = self
@@ -869,13 +839,12 @@ class StatList(Stat):  # low-level node
         """Remove nested StatLists"""
         if type(self.parent) == StatList:
             print('Flattening', id(self), 'into', id(self.parent))
+            if self.get_label():
+                emptystat = EmptyStat(self, symtab=self.symtab)
+                self.children.insert(0, emptystat)
+                emptystat.set_label(self.get_label())
             for c in self.children:
                 c.parent = self.parent
-            try:
-                label = self.get_label()
-                self.children[0].set_label(label)
-            except Exception:
-                pass
             i = self.parent.children.index(self)
             self.parent.children = self.parent.children[:i] + self.children + self.parent.children[i + 1:]
             return True
@@ -894,9 +863,8 @@ class StatList(Stat):  # low-level node
 
 class Block(Stat):
     def __init__(self, parent=None, gl_sym=None, lc_sym=None, defs=None, body=None):
-        self.parent = parent
+        super().__init__(parent, [], lc_sym)
         self.global_symtab = gl_sym
-        self.local_symtab = lc_sym
         self.body = body
         self.defs = defs
         self.body.parent = self
@@ -908,14 +876,14 @@ class Block(Stat):
 
 class Definition(IRNode):
     def __init__(self, parent=None, symbol=None):
+        super().__init__(parent, [], None)
         self.parent = parent
         self.symbol = symbol
 
 
 class FunctionDef(Definition):
     def __init__(self, parent=None, symbol=None, body=None):
-        self.parent = parent
-        self.symbol = symbol
+        super().__init__(parent, symbol)
         self.body = body
         self.body.parent = self
 
@@ -925,11 +893,7 @@ class FunctionDef(Definition):
 
 class DefinitionList(IRNode):
     def __init__(self, parent=None, children=None):
-        self.parent = parent
-        if children:
-            self.children = children
-        else:
-            self.children = []
+        super().__init__(parent, children, None)
 
     def append(self, elem):
         elem.parent = self

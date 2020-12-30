@@ -62,7 +62,7 @@ IRNode.codegen = irnode_codegen
 
 def block_codegen(self, regalloc):
     res = [comment('block'), '']
-    for sym in self.local_symtab:
+    for sym in self.symtab:
         res = codegen_append(res, sym.codegen(regalloc))
 
     if self.parent is None:
