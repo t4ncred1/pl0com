@@ -49,7 +49,7 @@ def compile_program(text):
     cfg.print_cfg_to_dot("cfg.dot")
 
     print("\n\nREGALLOC\n\n")
-    ra = MinimalRegisterAllocator(cfg, 11)
+    ra = LinearScanRegisterAllocator(cfg, 11)
     reg_alloc = ra()
     print(reg_alloc)
 

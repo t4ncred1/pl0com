@@ -10,35 +10,6 @@ from cfg import *
 SPILL_FLAG = 999
 
 
-class MinimalRegisterAllocator(object):
-
-    def __init__(self, cfg, nregs):
-        self.cfg = cfg
-        self.nregs = nregs
-        self.allocresult = RegisterAllocation(dict(), 0, self.nregs)
-
-    def __call__(self):
-        blockq = list(self.cfg.heads().values())
-        i = 0
-        while i < len(blockq):
-            n = blockq[i].succ()
-            nreal = []
-            for b in n:
-                if not (b in blockq):
-                    nreal.append(b)
-            blockq += nreal
-
-            bbra = BBRegisterAllocator(blockq[i], self.nregs)
-            thisalloc = bbra()
-            print("block:", repr(id(blockq[i])))
-            print("varliveness:\n", repr(bbra.varliveness))
-            print("ralloc:\n", repr(thisalloc), "\n")
-            self.allocresult.update(thisalloc)
-            i += 1
-
-        return self.allocresult
-
-
 class RegisterAllocation(object):
     """Object that contains the information about where each temporary is
     allocated.
@@ -101,72 +72,66 @@ class RegisterAllocation(object):
         return 'vartoreg = ' + repr(self.vartoreg)
 
 
-class BBRegisterAllocator(object):
+class LinearScanRegisterAllocator(object):
+    """The register allocator. Produces RegisterAllocation objects from a control
+    flow graph."""
 
-    def __init__(self, bb, nregs, prevralloc=None):
-        self.bb = bb
+    def __init__(self, cfg, nregs):
+        self.cfg = cfg
         self.nregs = nregs
-
-        self.vartoreg = {}
-        # when the same variable is used across more than one basic block, the other
-        # basic blocks should inherit the register where the variable was
-        # previously allocated
-        # yet to be implemented because currently it can never happen
-        if prevralloc:
-            livein = bb.live_in
-            for livevar in livein:
-                if prevralloc[livevar]:
-                    self.vartoreg[livevar] = prevralloc[livevar]
-                    raise Exception("register inheritance not fully implemented")
 
         # liveness of a variable on entry to each instruction
         # in order of start point
         self.varliveness = []  # {var=var, liveness=[indexes]}
-
-        self.allvars = bb.live_in.union(bb.live_out)
-        self.allvars = self.allvars.union(bb.gen.union(bb.kill))
-        self.allvars = remove_non_regs(self.allvars)
-        self.allvars = list(self.allvars)
+        # list of all variables
+        self.allvars = []
+        self.vartoreg = {}
 
     def compute_liveness_intervals(self):
-        """Simplified one-pass liveness analysis, for a single basic block.
-        It can be done in one pass because in a single basic block there are
-        no branches."""
-        vartolasti = dict()
-        livevars = set()
-        i = len(self.bb.instrs) - 1
+        """computes liveness intervals for the whole program. Note that the CFG
+        is flattened: this is the reason why the linear scan register allocation
+        algorithm does not handle liveness holes properly"""
+        inst_index = 0
+        min_gen = {}
+        max_use = {}
+        vars = set()
 
-        while i >= 0:
-            inst = self.bb.instrs[i]
-            kills = remove_non_regs(inst.collect_kills())
-            uses = remove_non_regs(inst.collect_uses())
-            livevars -= kills
-            livevars |= uses
+        for bb in self.cfg:
+            for i in bb.instrs:
+                try:
+                    kill = list(i.collect_kills())
+                except AttributeError:
+                    kill = []
+                use = list(i.collect_uses())
 
-            for var in kills:
-                lasti = vartolasti.get(var)
-                if lasti:
-                    self.varliveness.insert(0, {"var": var, "interv": lasti})
+                kill = remove_non_regs(kill)
+                use = remove_non_regs(use)
 
-            for var in livevars:
-                lasti = vartolasti.get(var)
-                if lasti is None:
-                    lasti = []
-                lasti.insert(0, i)
-                vartolasti[var] = lasti
+                for var in kill:
+                    if not var in min_gen:
+                        min_gen[var] = inst_index
+                        max_use[var] = inst_index
+                for var in use:
+                    max_use[var] = inst_index
 
-            i -= 1
+                vars |= kill | use
 
-        for var in livevars:
-            lasti = vartolasti[var]
-            if lasti:
-                self.varliveness.insert(0, {"var": var, "interv": lasti})
+                inst_index += 1
+
+        for v in vars:
+            gen = min_gen[v]
+            kill = max_use[v]
+            self.varliveness.insert(0, {"var": v, "interv": range(gen, kill)})
+        self.varliveness.sort(key=lambda x: x['interv'][0])
+        self.allvars = list(vars)
 
     def __call__(self):
         """Linear-scan register allocation (a variant of the more general
-        graph coloring algorithm known as "left-edge")"""
+                graph coloring algorithm known as "left-edge")"""
 
         self.compute_liveness_intervals()
+        print('LIVENESS INTERVALS:')
+        print(self.varliveness)
 
         live = []
         freeregs = set(range(0, self.nregs - 2))  # -2 for spill room
@@ -205,3 +170,4 @@ class BBRegisterAllocator(object):
             live.sort(key=lambda li: li['interv'][-1])
 
         return RegisterAllocation(self.vartoreg, numspill, self.nregs)
+
