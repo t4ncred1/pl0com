@@ -33,17 +33,19 @@ class BasicBlock(object):
         self.live_in = set([])
         self.live_out = set([])
 
-        # compute kill and gen set for this block, as it was a black box
+        # compute kill and gen set for this block, as if it was a black box
         self.kill = set([])  # assigned
         self.gen = set([])  # use before assign
         for i in instrs:
             uses = set(i.collect_uses())
+            try:
+                kills = set(i.collect_kills())
+            except AttributeError:
+                kills = set()
+            #print(i.human_repr(), uses, kills)
             uses.difference_update(self.kill)
             self.gen.update(uses)
-            try:
-                self.kill |= set(i.collect_kills())
-            except AttributeError:
-                pass
+            self.kill |= kills
         # Total number of registers needed
         self.total_vars_used = len(self.gen.union(self.kill))
 
@@ -78,6 +80,20 @@ class BasicBlock(object):
                 self.live_out = set(func.get_global_symbols())
         self.live_in = self.gen.union(self.live_out - self.kill)
         return not (lin == len(self.live_in) and lout == len(self.live_out))
+
+    def compute_instr_level_liveness(self):
+        """Compute live_in and live_out for each instruction"""
+        currently_alive = self.live_out
+        for i in reversed(self.instrs):
+            i.live_out = set(currently_alive)
+            try:
+                currently_alive -= set(i.collect_kills())
+            except AttributeError:
+                pass
+            currently_alive |= set(i.collect_uses())
+            i.live_in = set(currently_alive)
+        if not currently_alive == self.live_in:
+            raise Exception('Instruction level liveness or block level liveness incorrect')
 
     def remove_useless_next(self):
         """Check if unconditional branch, in that case remove next"""
@@ -198,6 +214,14 @@ class CFG(list):
             print('kill:', bb.kill)
             print('live_in:', bb.live_in)
             print('live_out:', bb.live_out)
+        print()
+        print('Instruction liveness')
+        for bb in self:
+            print('BASIC BLOCK:')
+            print(bb)
+            print()
+            for i in bb.instrs:
+                print('inst={:80} live_in={:200} live_out={:80}'.format(repr(i), repr(i.live_in), repr(i.live_out)))
 
     def find_target_bb(self, label):
         """Return the BB that contains a given label;
@@ -216,4 +240,5 @@ class CFG(list):
             out = []
             for bb in self:
                 out.append(bb.liveness_iteration())
-        return
+        for bb in self:
+            bb.compute_instr_level_liveness()
