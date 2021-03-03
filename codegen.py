@@ -166,7 +166,7 @@ def print_codegen(self, regalloc):
     rp = regalloc.get_register_for_variable(self.src)
     res += save_regs(REGS_CALLERSAVE)
     res += '\tmov ' + get_register_string(0) + ', ' + rp + '\n'
-    res += '\tbl __print\n'
+    res += '\tbl __pl0_print\n'
     res += restore_regs(REGS_CALLERSAVE)
     return res
 
@@ -184,7 +184,7 @@ def read_codegen(self, regalloc):
         savedregs.remove(regalloc.vartoreg[self.dest])
 
     res = save_regs(savedregs)
-    res += '\tbl __read\n'
+    res += '\tbl __pl0_read\n'
     res += '\tmov ' + rd + ', ' + get_register_string(0) + '\n'
     res += restore_regs(savedregs)
     res += regalloc.gen_spill_store_if_necessary(self.dest)

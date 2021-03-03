@@ -9,13 +9,13 @@
 extern void __pl0_start(void);
 
 
-void __print(int param)
+void __pl0_print(int param)
 {
   printf("%d\n", param);
 }
 
 
-int __read(void)
+int __pl0_read(void)
 {
   int tmp;
   scanf("%d", &tmp);
