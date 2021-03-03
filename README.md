@@ -18,8 +18,8 @@ What is still missing is support for any kind of optimization, and additionally
 the AST and IR design leaves a lot to be desired. The usage of real memory
 variables -- instead of always placing them into registers like in ACSE --
 actually makes this compiler produce much worse code than ACSE, but what can
-you do. To fix this it would need to be rewritten, but what piece of code
-is not eligible for a rewrite for some good reason? Leave it be, and bring your
+you do. After all, this issue could only be fixed by rewriting the whole
+compiler, and perfect is the worst enemy of good. Leave it be, and bring your
 search of perfection elsewhere ~~and far away from Python please~~.
 
 ## How to test the output
@@ -121,9 +121,16 @@ there for?).
 
 At this point you can type `continue` to un-freeze QEmu and actually start
 the execution of the program. Everything works as if you were debugging a
-native process (except the disassembly will be in ARM assembly language),
+native process (of course the disassembly will be in ARM assembly language),
 except for the fact that the command `run` will not work.
 
+### What if I am not using Linux?
 
+Create a virtual machine running Linux and then run the steps above.
+Seriously.
 
-
+Alternatively, if you want to limit the amount of recursion (albeit as a
+computer scientist the sole mention of recursion should be enough to produce an
+above-average level of excitement) you can use QEmu in system mode to setup a
+native ARMv6 VM (you can pilfer Raspbian binaries for that purpose).
+Good luck with file sharing.
