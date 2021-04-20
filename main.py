@@ -17,6 +17,7 @@ def compile_program(text):
     res = pars.program()
     print('\n', res, '\n')
 
+    return
     res.navigate(print_stat_list)
 
     node_list = get_node_list(res)
@@ -62,13 +63,17 @@ def compile_program(text):
 
 def driver_main():
     from lexer import __test_program
-    code = compile_program(__test_program)
-
+    test_program=__test_program
     import sys
-    if len(sys.argv) == 2:
-        outf = open(sys.argv[1], 'w')
-        outf.write(code)
-        outf.close()
+    print(sys.argv)
+    if len(sys.argv) >= 2:
+        with open(sys.argv[1], 'r') as inf :
+            test_program = inf.read()
+    code = compile_program(test_program)
+
+    if len(sys.argv) > 2:
+        with open(sys.argv[-1], 'w') as outf :
+            outf.write(code)
 
 
 if __name__ == '__main__':

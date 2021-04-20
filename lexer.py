@@ -51,7 +51,7 @@ class Lexer:
 
     def skip_whitespace(self):
         in_comment = False
-        while self.pos < len(self.text) and self.text[self.pos].isspace() or self.text[self.pos] == '{' or in_comment:
+        while self.pos < len(self.text) and (self.text[self.pos].isspace() or self.text[self.pos] == '{' or in_comment):
             if self.text[self.pos] == '{' and not in_comment:
                 in_comment = True
             elif in_comment and self.text[self.pos] == '}':
@@ -91,7 +91,9 @@ class Lexer:
             if t:
                 yield 'ident', t
                 continue
-            yield 'illegal', self.text[self.pos]
+            try : t = self.text[self.pos] 
+            except Exception : t='end of file' # at end of file this will fail because self.pos >= len(self.text)
+            yield 'illegal', t
             break
 
 
