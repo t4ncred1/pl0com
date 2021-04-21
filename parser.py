@@ -175,6 +175,11 @@ class Parser:
             stepval=factor(symtab=symtab)
             self.expect('dosym')
             body = self.statement(symtab)
+            initvar=ir.Var(var=init, symtab=symtab)
+            init_assign = ir.AssignStat(target=init, offset=None, expr=initexpr, symtab=symtab)
+            cond = ir.BinExpr(children=['lss', initvar, to], symtab=symtab)
+            step= ir.BinExpr(children=['plus', initvar, stepval], symtab=symtab)
+            return ir.ForStat(assign=init_assign, cond=cond, step=step, body=body, symtable=symtable)
         elif self.accept('print'):
             exp = self.expression(symtab)
             return ir.PrintStat(exp=exp, symtab=symtab)
