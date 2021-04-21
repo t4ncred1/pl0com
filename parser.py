@@ -163,6 +163,18 @@ class Parser:
             self.expect('dosym')
             body = self.statement(symtab)
             return ir.WhileStat(cond=cond, body=body, symtab=symtab)
+        elif self.accept('forsym'):
+            self.expect('ident')
+            init=symtab.find(self.value)
+            self.expect('eql')
+            initexpr = self.expression(symtab)
+            self.expect('tosym')
+            to=self.factor(symtab=symtab)
+            self.expect('bysym')
+            self.expect('ident')
+            stepval=factor(symtab=symtab)
+            self.expect('dosym')
+            body = self.statement(symtab)
         elif self.accept('print'):
             exp = self.expression(symtab)
             return ir.PrintStat(exp=exp, symtab=symtab)
