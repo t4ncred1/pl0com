@@ -1,0 +1,10 @@
+VAR i;
+
+BEGIN
+   i := 0;
+   for i to 10 by 1 do
+   begin
+      !i;
+      !i
+   end
+END.

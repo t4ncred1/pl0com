@@ -1,0 +1,10 @@
+VAR i;
+
+BEGIN
+    i:=0;
+    while i <= 10 do
+    begin
+          !i;
+          i := i + 1
+    end
+END.
