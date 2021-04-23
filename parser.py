@@ -177,7 +177,8 @@ class Parser:
             cond = ir.BinExpr(children=['lss', initvar, to], symtab=symtab)
             step = ir.BinExpr(children=['plus', testvar, stepval], symtab=symtab)
             step_assign = ir.AssignStat(target=init, offset=None, expr=step, symtab=symtab)
-            return ir.ForStat(cond=cond, step=step_assign, body=body, symtab=symtab)
+            body.append(step_assign)
+            return ir.ForStat(cond=cond, body=body, symtab=symtab)
         elif self.accept('print'):
             exp = self.expression(symtab)
             return ir.PrintStat(exp=exp, symtab=symtab)
