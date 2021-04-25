@@ -1,10 +1,26 @@
 VAR i;
 
 BEGIN
+
+   i := 0;
+   for i to 10 by 1 do
+   begin
+      !i
+   end;
+
+
+   i := 10;
+   for i to 9 by 1 do
+   begin
+      !i
+   end;
+
+
    i := 0;
    for i to 10 by 1 do
    begin
       !i;
-      !i
+      i := i+1
    end
+
 END.
