@@ -212,23 +212,25 @@ class IRNode:  # abstract
         res += '}'
         return res
 
-    def navigate(self, action):
+    def navigate(self, action, parlist=None):
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
                  'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
         if 'children' in dir(self) and len(self.children):
             print('navigating children of', type(self), id(self), len(self.children))
             for node in self.children:
                 try:
-                    node.navigate(action)
+                    node.navigate(action, parlist)
                 except Exception:
                     pass
         for d in attrs:
             try:
-                getattr(self, d).navigate(action)
+                getattr(self, d).navigate(action, parlist)
                 print('successfully navigated attr ', d, ' of', type(self), id(self))
             except Exception:
                 pass
-        action(self)
+        if parlist:
+            action(self, parlist)
+        else: action(self)
 
     def replace(self, old, new):
         new.parent = self
