@@ -140,8 +140,18 @@ class Parser:
             return ir.AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
 
         elif self.accept('callsym'):
+            parlist=[];
             self.expect('ident')
-            return ir.CallStat(call_expr=ir.CallExpr(function=symtab.find(self.value), symtab=symtab), symtab=symtab)
+            fname=self.value
+
+            if(self.accept('lparen')):
+                while 1:
+                    parlist.append(self.expression(symtab))
+                    if (not self.accept('comma')):
+                        break
+                self.expect('rparen')
+            return ir.CallStat(call_expr=ir.CallExpr(function=symtab.find(fname), symtab=symtab, parameters=parlist), symtab=symtab)
+
         elif self.accept('beginsym'):
             statement_list = ir.StatList(symtab=symtab)
             statement_list.append(self.statement(symtab))

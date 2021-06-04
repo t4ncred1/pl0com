@@ -384,12 +384,16 @@ class CallExpr(Expr):
     def __init__(self, parent=None, function=None, parameters=None, symtab=None):
         super().__init__(parent, [], symtab)
         self.symbol = function
-        # parameters are ignored
-        if parameters:
-            self.children = parameters[:]
-        else:
-            self.children = []
 
+        if parameters is None:
+            self.children = []
+        else:
+            self.children = parameters[:]
+            for c in self.children:
+                c.parent = self
+
+    def get_children(self):
+        return self.children
 
 # STATEMENTS
 
@@ -424,10 +428,15 @@ class CallStat(Stat):
         return self.call.collect_uses() + self.symtab.exclude([TYPENAMES['function'], TYPENAMES['label']])
 
     def lower(self):
+        params = []
+        off=0
+        for child in self.call.get_children():
+            off+=8
+            params+=[StoreParameterStat(offset = off, symbol = child.destination(), symtab = self.symtab)]
         dest = self.call.symbol
         bst = BranchStat(target=dest, symtab=self.symtab, returns=True)
-        return self.parent.replace(self, bst)
-
+        stat_list = StatList(self.parent, self.call.get_children() + params + [bst], self.symtab)
+        return self.parent.replace(self, stat_list)
 
 class IfStat(Stat):
     def __init__(self, parent=None, cond=None, thenpart=None, elsepart=None, symtab=None):
@@ -718,6 +727,33 @@ class StoreStat(Stat):  # low-level node
             return '[' + repr(self.dest) + '] <- ' + repr(self.symbol)
         return repr(self.dest) + ' <- ' + repr(self.symbol)
 
+
+class StoreParameterStat(Stat):  # low-level node
+    # store the symbol to the specified destination + offset
+    def __init__(self, parent=None, offset=None, symbol=None, symtab=None):
+        """Stores the value in the 'symbol' temporary (register) to 'dest' which
+        can be a symbol allocated in memory, or a temporary (symbol allocated to a
+        register). In the first case, the store is done to the symbol itself; in
+        the second case the dest symbol is used as a pointer to an arbitrary
+        location in memory."""
+        print("storeparameterstat element")
+        super().__init__(parent, [], symtab)
+        self.symbol = symbol
+        if self.symbol.alloct != 'reg':
+            raise RuntimeError('store not from parameter')
+        self.offset = offset
+
+    def collect_uses(self):
+        return [self.symbol]
+
+    def collect_kills(self):
+        return []
+
+    def destination(self):
+        return
+
+    def human_repr(self):
+        return repr(self.offset) +' from the stack pointer'+ ' <- ' + repr(self.symbol)
 
 class LoadStat(Stat):  # low-level node
     def __init__(self, parent=None, dest=None, symbol=None, usehint=None, symtab=None):
