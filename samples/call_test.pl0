@@ -1,0 +1,53 @@
+VAR y, x, squ, tes;
+VAR arr[5]: char;
+var multid[5][5]: short;
+
+{This is a comment. You can write anything you want in a comment}
+
+PROCEDURE test(t, v);
+BEGIN
+    tes := t
+END;
+
+PROCEDURE square(s);
+BEGIN
+   squ := s * s;
+   CALL test(squ, s)
+END;
+ 
+BEGIN
+   x := -1;
+   
+   read x;
+   if x > 100 then begin
+      print -x
+   end else begin
+      print x
+   end;
+
+   x := 1;
+   WHILE x <= 10 DO
+   BEGIN
+      CALL square(y+1);
+      y:=y+1;
+      !squ
+   END;
+   
+   x := 101;
+   while x <= 105 do begin
+    arr[x-100] := x;
+    !arr[x-100];
+    x := x + 1
+   end;
+   
+   x := 1;
+   y := 1;
+   while x <= 5 do begin
+    while y <= 5 do begin
+      multid[x][y] := arr[x];
+      !multid[x][y];
+      x := x + 1;
+      y := y + 1
+    end
+  end
+END.
