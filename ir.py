@@ -110,7 +110,7 @@ TYPENAMES = {
     'function': FunctionType(),
 }
 
-ALLOC_CLASSES = ['global', 'auto', 'reg', 'imm']
+ALLOC_CLASSES = ['global', 'auto', 'reg', 'imm', 'par']
 
 
 class Symbol:
@@ -155,6 +155,9 @@ class SymbolTable(list):
 
     def exclude(self, barred_types):
         return [symb for symb in self if symb.stype not in barred_types]
+
+    def include(self, include_types):
+        return [symb for symb in self if symb.stype in include_types]
 
 
 # IRNODE
@@ -228,9 +231,9 @@ class IRNode:  # abstract
                 print('successfully navigated attr ', d, ' of', type(self), id(self))
             except Exception:
                 pass
-        if parlist:
-            action(self, parlist)
-        else: action(self)
+        if parlist is None:
+            action(self)
+        else: action(self, parlist)
 
     def replace(self, old, new):
         new.parent = self

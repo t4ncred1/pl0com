@@ -199,8 +199,11 @@ class Parser:
             return ir.AssignStat(target=target, offset=offset, expr=ir.ReadStat(symtab=symtab), symtab=symtab)
 
     @logger
-    def block(self, symtab, alloct='auto'):
-        local_vars = ir.SymbolTable()
+    def block(self, symtab, alloct='auto', loc=None):
+        if loc is None:
+            local_vars = ir.SymbolTable()
+        else:
+            local_vars = loc
         defs = ir.DefinitionList()
 
         while self.accept('constsym') or self.accept('varsym'):
@@ -215,13 +218,21 @@ class Parser:
             self.expect('semicolon')
 
         while self.accept('procsym'):
+            function_vars = ir.SymbolTable(local_vars)
             self.expect('ident')
             fname = self.value
+
+            if self.accept('lparen'):
+                  self.vardef(function_vars, 'par');
+                  while(self.accept('comma')):
+                      self.vardef(function_vars, 'par');
+                  self.expect('rparen')
+
             self.expect('semicolon')
-            local_vars.append(ir.Symbol(fname, ir.TYPENAMES['function']))
-            fbody = self.block(local_vars)
+            symtab.append(ir.Symbol(fname, ir.TYPENAMES['function']))
+            fbody = self.block(symtab, loc=function_vars)
             self.expect('semicolon')
-            defs.append(ir.FunctionDef(symbol=local_vars.find(fname), body=fbody))
+            defs.append(ir.FunctionDef(symbol=symtab.find(fname), body=fbody))
         stat = self.statement(ir.SymbolTable(symtab[:] + local_vars))
         return ir.Block(gl_sym=symtab, lc_sym=local_vars, defs=defs, body=stat)
 
